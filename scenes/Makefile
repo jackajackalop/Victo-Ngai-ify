@@ -3,7 +3,7 @@
 OS := $(shell uname)
 
 ifeq ($(OS), Linux)
-	BLENDER=../../blender-2.80-linux-glibc217-x86_64/blender
+	BLENDER=../../../blender-2.80-linux-glibc217-x86_64/blender
 else
 	BLENDER=/Applications/Blender.app/Contents/MacOS/Blender
 endif
@@ -13,6 +13,8 @@ all : \
 	../dist/plant.banims \
 	../dist/spheres.pnct \
 	../dist/spheres.scene \
+	../dist/rat_girl.pnct \
+	../dist/rat_girl.scene
 
 
 ../dist/plant.pnct : plant.blend export-meshes.py
@@ -26,6 +28,11 @@ all : \
 
 ../dist/spheres.pnct : spheres.blend export-meshes.py
 	$(BLENDER) --background --python export-meshes.py -- 'spheres.blend' '$@'
+
+../dist/rat_girl.pnct : rat_girl.blend export-meshes.py
+	$(BLENDER) --background --python export-meshes.py -- 'rat_girl.blend' '$@'
+../dist/rat_girl.scene : rat_girl.blend export-scene.py
+	$(BLENDER) --background --python export-scene.py -- 'rat_girl.blend' '$@'
 
 #../dist/pool.scene : pool.blend export-scene.py
 #	$(BLENDER) --background --python export-scene.py -- 'pool.blend:Table 1' '$@'

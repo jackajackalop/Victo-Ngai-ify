@@ -28,7 +28,6 @@ struct PlantMode : public Mode {
 	bool backward = false;
 
 	//scene:
-	Scene scene;
 	Scene::Drawable *plant = nullptr;
 	Scene::Camera *camera = nullptr;
 	float camera_radius = 10.0f;
