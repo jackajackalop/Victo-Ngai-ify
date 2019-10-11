@@ -21,6 +21,18 @@ struct PlantMode : public Mode {
 	virtual bool handle_event(SDL_Event const &evt, glm::uvec2 const &window_size) override;
 	virtual void update(float elapsed) override;
 	virtual void draw(glm::uvec2 const &drawable_size) override;
+	//draws out basic scene render, adjusted flat color fills with cell shading
+	void draw_scene(GLuint *basic_tex_, GLuint *color_tex_, GLuint *depth_tex_); 
+	//draws out gradients
+	void draw_gradients(); 
+	//paper textures
+	void draw_texture(); 
+	//screen tones in shadows
+	void draw_screentones(); 
+	//lineart
+	void draw_lines(); 
+	//draws the vignette effect
+	void draw_vignette(); 
 
 	//controls:
 	bool mouse_captured = false;

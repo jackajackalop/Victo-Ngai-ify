@@ -2,6 +2,8 @@
 
 #include "LitColorTextureProgram.hpp"
 #include "BoneLitColorTextureProgram.hpp"
+#include "CopyToScreenProgram.hpp"
+#include "SceneProgram.hpp"
 #include "Load.hpp"
 #include "Mesh.hpp"
 #include "Scene.hpp"
@@ -18,29 +20,6 @@
 #include <cstddef>
 #include <random>
 #include <unordered_map>
-
-Load< MeshBuffer > plant_meshes(LoadTagDefault, [](){
-		auto ret = new MeshBuffer(data_path("plant.pnct"));
-		return ret;
-		});
-
-Load< GLuint > plant_meshes_for_lit_color_texture_program(LoadTagDefault, [](){
-		return new GLuint(plant_meshes->make_vao_for_program(lit_color_texture_program->program));
-		});
-
-BoneAnimation::Animation const *plant_banim_wind = nullptr;
-BoneAnimation::Animation const *plant_banim_walk = nullptr;
-
-Load< BoneAnimation > plant_banims(LoadTagDefault, [](){
-		auto ret = new BoneAnimation(data_path("plant.banims"));
-		plant_banim_wind = &(ret->lookup("Wind"));
-		plant_banim_walk = &(ret->lookup("Walk"));
-		return ret;
-		});
-
-Load< GLuint > plant_banims_for_bone_lit_color_texture_program(LoadTagDefault, [](){
-		return new GLuint(plant_banims->make_vao_for_program(bone_lit_color_texture_program->program));
-		});
 
 GLuint meshes_for_lit_color_texture_program = 0;
 static Load< MeshBuffer > meshes(LoadTagDefault, []() -> MeshBuffer const * {
@@ -132,9 +111,66 @@ void PlantMode::update(float elapsed) {
 
 }
 
-void PlantMode::draw(glm::uvec2 const &drawable_size) {
+//This code allocates and resizes them as needed:
+struct Textures {
+	glm::uvec2 size = glm::uvec2(0,0); //remember the size of the framebuffer
+
+	GLuint basic_tex = 0;
+	GLuint color_tex = 0;
+	GLuint depth_tex = 0;
+	GLuint final_tex = 0;
+	void allocate(glm::uvec2 const &new_size) {
+		//allocate full-screen framebuffer:
+
+		if (size != new_size) {
+			size = new_size;
+
+			auto alloc_tex = [this](GLuint *tex, GLint internalformat, GLint format){
+				if (*tex == 0) glGenTextures(1, tex);
+				glBindTexture(GL_TEXTURE_2D, *tex);
+				glTexImage2D(GL_TEXTURE_2D, 0, internalformat, size.x,
+						size.y, 0, format, GL_UNSIGNED_BYTE, NULL);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+				glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+				glBindTexture(GL_TEXTURE_2D, 0);
+			};
+
+			alloc_tex(&basic_tex, GL_RGBA8, GL_RGBA);
+			alloc_tex(&color_tex, GL_RGBA8, GL_RGBA);
+			alloc_tex(&depth_tex, GL_DEPTH_COMPONENT24, GL_DEPTH_COMPONENT);
+			alloc_tex(&final_tex, GL_RGBA8, GL_RGBA);
+			GL_ERRORS();
+		}
+
+	}
+} textures;
+
+
+void PlantMode::draw_scene(GLuint *basic_tex_, GLuint *color_tex_, GLuint *depth_tex_) 
+{
+	assert(basic_tex_);
+	assert(color_tex_);
+	assert(depth_tex_);
+	auto &basic_tex = *basic_tex_;
+	auto &color_tex = *color_tex_;
+	auto &depth_tex = *depth_tex_;
+
+	static GLuint fb = 0;
+	if(fb==0) glGenFramebuffers(1, &fb);
+	glBindFramebuffer(GL_FRAMEBUFFER, fb);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+			basic_tex, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D,
+			color_tex, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
+			depth_tex, 0);
+	GLenum bufs[2] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
+	glDrawBuffers(2, bufs);
+
 	//Draw scene:
-	camera->aspect = drawable_size.x / float(drawable_size.y);
+	camera->aspect = textures.size.x / float(textures.size.y);
 
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -146,8 +182,64 @@ void PlantMode::draw(glm::uvec2 const &drawable_size) {
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glEnable(GL_CULL_FACE);
 	glCullFace(GL_BACK);
-
+	
+	glUseProgram(scene_program->program);
 	scene->draw(*camera);
+	GL_ERRORS();
+}
+
+void PlantMode::draw_gradients()
+{
+
+}
+
+void PlantMode::draw_texture()
+{
+
+}
+
+void PlantMode::draw_screentones()
+{
+
+}
+
+void PlantMode::draw_lines()
+{
+
+}
+
+void PlantMode::draw_vignette(){
+
+}
+
+void PlantMode::draw(glm::uvec2 const &drawable_size) {
+	textures.allocate(drawable_size);
+
+	draw_scene(&textures.basic_tex, &textures.color_tex, &textures.depth_tex); 
+	draw_gradients(); 
+	draw_texture(); 
+	draw_screentones(); 
+	draw_lines(); 
+	draw_vignette(); 
+
+	//Copy scene from color buffer to screen, performing post-processing effects:
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+	glClear(GL_COLOR_BUFFER_BIT);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, textures.basic_tex);
+    	glDisable(GL_BLEND);
+    	glDisable(GL_DEPTH_TEST);
+	glBindVertexArray(empty_vao);
+	glUseProgram(copy_to_screen_program->program);
+
+	glDrawArrays(GL_TRIANGLES, 0, 3);
+
+	glUseProgram(0);
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, 0);
 
 	GL_ERRORS();
 }
