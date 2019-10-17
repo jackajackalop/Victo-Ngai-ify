@@ -69,6 +69,7 @@ SceneProgram::SceneProgram() {
 		"layout(location=0) out vec4 basic_out;\n"
 		"layout(location=1) out vec4 color_out;\n"
 
+        //referenced http://www.easyrgb.com/en/math.php
         "vec3 rgb_to_hsv(float r, float g, float b){ \n"
         "   float hue = 0.0; \n"
         "   float saturation = 0.0; \n"
@@ -88,6 +89,7 @@ SceneProgram::SceneProgram() {
         "   return vec3(hue, saturation, value); \n"
         "} \n"
 
+        //referenced http://www.easyrgb.com/en/math.php
         "vec3 hsv_to_rgb(float hue, float saturation, float value){ \n"
         "   float h = hue/60.0; \n"
         "   int i = int(h); \n"
