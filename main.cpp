@@ -3,6 +3,7 @@
 
 //Starting mode:
 #include "demo_menu.hpp"
+#include "PlantMode.hpp"
 
 //Deal with calling resource loading functions:
 #include "Load.hpp"
@@ -99,7 +100,7 @@ int main(int argc, char **argv) {
 	call_load_functions();
 
 	//------------ create game mode + make current --------------
-	Mode::set_current(demo_menu);
+	Mode::set_current(std::make_shared< PlantMode >());
 
 	//------------ main loop ------------
 
