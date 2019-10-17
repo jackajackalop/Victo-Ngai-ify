@@ -119,6 +119,7 @@ SceneProgram::SceneProgram() {
         "   float dist = abs(goal-hue); \n"
         "   float hadj = dist/15.0; \n"
         "   hue += hadj*hadj*(goal-hue)/dist; \n"//adds the sign
+        "   if(value < 0.9) value = mix(0.0, 0.7, value); \n"
         "   return vec3(hue, saturation, value); \n"
         "} \n"
 
@@ -135,10 +136,6 @@ SceneProgram::SceneProgram() {
 
         "   float sadj = distinv/(50.0);\n "
         "   saturation += sadj*sadj; \n"
-
-        "   float vadj = max(dist/120.0-0.1, 0.0); \n"
-        "   vadj *= vadj; \n"
-        "   value += vadj*vadj; \n"
 
         "   while(hue > 360.0) hue -= 360.0; \n"
         "   while(hue < 0.0) hue += 360.0; \n"
