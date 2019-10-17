@@ -70,7 +70,10 @@ SceneProgram::SceneProgram() {
 		"layout(location=1) out vec4 color_out;\n"
 
         //referenced http://www.easyrgb.com/en/math.php
-        "vec3 rgb_to_hsv(float r, float g, float b){ \n"
+        "vec3 rgb_to_hsv(vec3 rgb){ \n"
+        "   float r = rgb.r; \n"
+        "   float g = rgb.g; \n"
+        "   float b = rgb.b; \n"
         "   float hue = 0.0; \n"
         "   float saturation = 0.0; \n"
         "   float minVal = min(r, min(g, b)); \n"
@@ -90,7 +93,10 @@ SceneProgram::SceneProgram() {
         "} \n"
 
         //referenced http://www.easyrgb.com/en/math.php
-        "vec3 hsv_to_rgb(float hue, float saturation, float value){ \n"
+        "vec3 hsv_to_rgb(vec3 hsv){ \n"
+        "   float hue = hsv[0]; \n"
+        "   float saturation = hsv[1]; \n"
+        "   float value = hsv[2]; \n"
         "   float h = hue/60.0; \n"
         "   int i = int(h); \n"
         "   float a = value*(1.0-saturation); \n"
@@ -105,19 +111,56 @@ SceneProgram::SceneProgram() {
         "   return vec3(0.0, 0.0, 0.0); \n"
         "} \n"
 
+        "vec3 cool_shift(vec3 hsv){ \n"
+        "   float goal = 200.0; \n"
+        "   float hue = hsv[0]; \n"
+        "   float saturation = hsv[1]; \n"
+        "   float value = hsv[2]; \n"
+        "   float dist = abs(goal-hue); \n"
+        "   float hadj = dist/15.0; \n"
+        "   hue += hadj*hadj*(goal-hue)/dist; \n"//adds the sign
+        "   return vec3(hue, saturation, value); \n"
+        "} \n"
+
+        "vec3 warm_shift(vec3 hsv){ \n"
+        "   float goal = 10.0; \n"
+        "   float hue = hsv[0]; \n"
+        "   float saturation = hsv[1]; \n"
+        "   float value = hsv[2]; \n"
+        "   float dist = abs(goal-hue); \n"
+        "   float distinv = goal-dist; \n"
+
+        "   float hadj = dist/13.0+0.015; \n"
+        "   hue += hadj*hadj*(goal-hue)/dist; \n"//adds the sign
+
+        "   float sadj = distinv/(50.0);\n "
+        "   saturation += sadj*sadj; \n"
+
+        "   float vadj = max(dist/120.0-0.1, 0.0); \n"
+        "   vadj *= vadj; \n"
+        "   value += vadj*vadj; \n"
+
+        "   while(hue > 360.0) hue -= 360.0; \n"
+        "   while(hue < 0.0) hue += 360.0; \n"
+        "   saturation = clamp(saturation, 0.0, 1.0); \n"
+        "   saturation = clamp(saturation, 0.0, 1.0); \n"
+        "   return vec3(hue, saturation, value); \n"
+        "} \n"
+
 		"void main() {\n"
 		"	vec3 n = normalize(normal);\n"
 		"	vec3 l = normalize(vec3(0.1, 0.1, 1.0));\n"
 		"	vec4 albedo = texture(TEX, texCoord) * color;\n"
 		//simple hemispherical lighting model:
 		"	vec3 light = mix(vec3(0.0,0.0,0.1), vec3(1.0,1.0,0.95), dot(n,l)*0.5+0.5);\n"
-		"	basic_out = vec4(light*albedo.rgb, albedo.a);\n"
+		"	basic_out = albedo;\n"//vec4(light*albedo.rgb, albedo.a);\n"
         "   color_out = albedo; \n"
 
-        "   vec3 hsv = rgb_to_hsv(albedo.r, albedo.g, albedo.b); \n"
-        "   if(hsv[0] > 100.0) hsv[0] += 50.0; \n"
-        "   vec3 rgb = hsv_to_rgb(hsv[0], hsv[1], hsv[2]); \n"
-        "   color_out = vec4(rgb.r, rgb.g, rgb.b, 1.0); \n"
+        "   vec3 hsv = rgb_to_hsv(albedo.rgb); \n"
+        "   if(hsv[0] > 80.0 && hsv[0] < 275.0) hsv = cool_shift(hsv); \n"
+        "   else hsv = warm_shift(hsv); \n"
+        "   vec3 rgb = hsv_to_rgb(hsv); \n"
+        "   color_out = vec4(rgb, 1.0); \n"
 		"}\n"
 	);
 	//As you can see above, adjacent strings in C/C++ are concatenated.
