@@ -92,6 +92,8 @@ bool PlantMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size
             show = BASIC;
         }else if(evt.key.keysym.scancode == SDL_SCANCODE_1){
             show = FLATS;
+        }else if(evt.key.keysym.scancode == SDL_SCANCODE_2){
+            show = GRADIENTS;
         }
     }
 
@@ -108,6 +110,7 @@ struct Textures {
     GLuint basic_tex = 0;
     GLuint color_tex = 0;
     GLuint depth_tex = 0;
+    GLuint gradient_tex = 0;
     GLuint final_tex = 0;
     void allocate(glm::uvec2 const &new_size) {
         //allocate full-screen framebuffer:
@@ -130,6 +133,7 @@ struct Textures {
             alloc_tex(&basic_tex, GL_RGBA8, GL_RGBA);
             alloc_tex(&color_tex, GL_RGBA8, GL_RGBA);
             alloc_tex(&depth_tex, GL_DEPTH_COMPONENT24, GL_DEPTH_COMPONENT);
+            alloc_tex(&gradient_tex, GL_RGBA8, GL_RGBA);
             alloc_tex(&final_tex, GL_RGBA8, GL_RGBA);
             GL_ERRORS();
         }
@@ -179,7 +183,8 @@ void PlantMode::draw_scene(GLuint *basic_tex_, GLuint *color_tex_, GLuint *depth
     GL_ERRORS();
 }
 
-void PlantMode::draw_gradients()
+void PlantMode::draw_gradients(GLuint basic_tex, GLuint color_tex,
+                                GLuint *gradient_tex_)
 {
 
 }
@@ -207,7 +212,8 @@ void PlantMode::draw(glm::uvec2 const &drawable_size) {
     textures.allocate(drawable_size);
 
     draw_scene(&textures.basic_tex, &textures.color_tex, &textures.depth_tex);
-    draw_gradients();
+    draw_gradients(textures.basic_tex, textures.color_tex,
+            &textures.gradient_tex);
     draw_texture();
     draw_screentones();
     draw_lines();
@@ -222,6 +228,7 @@ void PlantMode::draw(glm::uvec2 const &drawable_size) {
     }else if(show == FLATS){
         glBindTexture(GL_TEXTURE_2D, textures.color_tex);
     }else if(show == GRADIENTS){
+        glBindTexture(GL_TEXTURE_2D, textures.gradient_tex);
     }else if(show == CELSHADED){
     }
 
