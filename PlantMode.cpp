@@ -20,6 +20,7 @@
 #include <fstream>
 #include <map>
 #include <cstddef>
+#include <png.h>
 #include <random>
 #include <unordered_map>
 
@@ -54,6 +55,33 @@ static Load< Scene > scene(LoadTagLate, []() -> Scene const * {
                 });
         return ret;
         });
+
+
+GLuint load_texture(std::string const &filename) {
+	glm::uvec2 size;
+	std::vector< glm::u8vec4 > data;
+	load_png(filename, &size, &data, LowerLeftOrigin);
+
+	GLuint tex = 0;
+	glGenTextures(1, &tex);
+	glBindTexture(GL_TEXTURE_2D, tex);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, size.x, size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, data.data());
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glGenerateMipmap(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	GL_ERRORS();
+
+	return tex;
+}
+
+//texture for the platform in the test scene
+Load< GLuint > gradient_png_tex(LoadTagDefault, [](){
+	return new GLuint(load_texture(data_path("gradient.png")));
+});
+
 
 PlantMode::PlantMode() {
     assert(scene->cameras.size() && "Scene requires a camera.");
@@ -272,11 +300,49 @@ void PlantMode::draw_gradients_blur(GLuint basic_tex, GLuint color_tex,
     GL_ERRORS();
 }
 
+void PlantMode::cpu_gradient(GLuint basic_tex, GLuint color_tex){
+    FILE *output = fopen("dist/gradient.png", "wb");
+    int width = textures.size.x;
+    int height = textures.size.y;
+
+    if(!output) return;
+    png_structp png = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+    if (!png) return;
+    png_infop info = png_create_info_struct(png);
+    if(!info) return;
+    if(setjmp(png_jmpbuf(png))) return;
+    png_init_io(png, output);
+    png_set_IHDR(png, info, width, height, 8,
+            PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE,
+            PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+    png_write_info(png, info);
+
+    glBindTexture(GL_TEXTURE_2D, color_tex);
+    std::vector<GLfloat> pixels(width*height*4, 0.0f);
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, pixels.data());
+    png_bytep row = (png_bytep)malloc(sizeof(png_byte)*width*4);
+    for(int y = height-1; y >= 0; y--) {
+        for(int x = 0; x<width; x++){
+            row[x*4] = glm::clamp(int32_t(pixels[(x+y*width)*4]*255), 0, 255);
+            row[x*4+1] = glm::clamp(int32_t(pixels[(x+y*width)*4+1]*255), 0, 255);
+            row[x*4+2] = glm::clamp(int32_t(pixels[(x+y*width)*4+2]*255), 0, 255);
+            row[x*4+3] = glm::clamp(int32_t(pixels[(x+y*width)*4+3]*255), 0, 255);
+        }
+        png_write_row(png, row);
+    }
+    png_write_end(png, NULL);
+
+    free(row);
+    fclose(output);
+}
+
 void PlantMode::draw_gradients_linfit(GLuint basic_tex, GLuint color_tex,
                                 GLuint *gradient_tex_)
 {
     assert(gradient_tex_);
     auto &gradient_tex = *gradient_tex_;
+
+    cpu_gradient(basic_tex, color_tex);
 
     static GLuint fb = 0;
     if(fb == 0) glGenFramebuffers(1, &fb);
@@ -302,17 +368,13 @@ void PlantMode::draw_gradients_linfit(GLuint basic_tex, GLuint color_tex,
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, basic_tex);
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, color_tex);
+    glBindTexture(GL_TEXTURE_2D, *gradient_png_tex);
 
     glUseProgram(gradient_program->program);
     glDrawArrays(GL_TRIANGLES, 0, 3);
     GL_ERRORS();
 
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, 0);
 
     GL_ERRORS();

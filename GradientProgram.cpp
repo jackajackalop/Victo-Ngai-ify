@@ -20,18 +20,16 @@ GradientProgram::GradientProgram() {
 	,
 		//fragment shader:
 		"#version 330\n"
-		"uniform sampler2D basic_tex;\n"
-        "uniform sampler2D color_tex;\n"
+		"uniform sampler2D gradient_tex;\n"
 		"layout(location=0) out vec4 gradient_out;\n"
 
 		"void main() {\n"
-        "   gradient_out = texelFetch(color_tex, ivec2(gl_FragCoord.xy), 0); \n"
+        "   gradient_out = texelFetch(gradient_tex, ivec2(gl_FragCoord.xy), 0); \n"
 		"}\n"
 	);
 	glUseProgram(program); //bind program -- glUniform* calls refer to this program now
 
-	glUniform1i(glGetUniformLocation(program, "basic_tex"), 0);
-    glUniform1i(glGetUniformLocation(program, "color_tex"), 1);
+	glUniform1i(glGetUniformLocation(program, "gradient_tex"), 0);
 
 	glUseProgram(0); //unbind program -- glUniform* calls refer to ??? now
     GL_ERRORS();
