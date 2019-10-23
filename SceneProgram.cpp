@@ -92,6 +92,13 @@ SceneProgram::SceneProgram() {
         "   return vec3(hue, saturation, value); \n"
         "} \n"
 
+        "vec3 shadow_color(vec3 rgb){ \n"
+        "   vec3 hsv = rgb_to_hsv(rgb); \n"
+        "   hsv[2] -= 0.2; \n"
+        "   hsv[1] -= 0.2; \n"
+        "   return hsv; \n"
+        "} \n"
+
         //referenced http://www.easyrgb.com/en/math.php
         "vec3 hsv_to_rgb(vec3 hsv){ \n"
         "   float hue = hsv[0]; \n"
@@ -137,8 +144,8 @@ SceneProgram::SceneProgram() {
         "   float sadj = distinv/(50.0);\n "
         "   saturation += sadj*sadj; \n"
 
-        "   while(hue > 360.0) hue -= 360.0; \n"
-        "   while(hue < 0.0) hue += 360.0; \n"
+        "   if(hue > 360.0) hue -= 360.0; \n"
+        "   if(hue < 0.0) hue += 360.0; \n"
         "   saturation = clamp(saturation, 0.0, 1.0); \n"
         "   saturation = clamp(saturation, 0.0, 1.0); \n"
         "   return vec3(hue, saturation, value); \n"
@@ -150,14 +157,26 @@ SceneProgram::SceneProgram() {
 		"	vec4 albedo = texture(TEX, texCoord) * color;\n"
 		//simple hemispherical lighting model:
 		"	vec3 light = mix(vec3(0.0,0.0,0.1), vec3(1.0,1.0,0.95), dot(n,l)*0.5+0.5);\n"
-		"	basic_out = albedo;\n"//vec4(light*albedo.rgb, albedo.a);\n"
         "   color_out = albedo; \n"
+		"	basic_out = vec4(light*albedo.rgb, albedo.a);\n"
+        "   float lum = max(max(basic_out.r, basic_out.g), basic_out.b); \n"
 
-        "   vec3 hsv = rgb_to_hsv(albedo.rgb); \n"
+        "   vec3 hsv = rgb_to_hsv(color_out.rgb); \n"
         "   if(hsv[0] > 80.0 && hsv[0] < 275.0) hsv = cool_shift(hsv); \n"
         "   else hsv = warm_shift(hsv); \n"
         "   vec3 rgb = hsv_to_rgb(hsv); \n"
         "   color_out = vec4(rgb, 1.0); \n"
+
+        "   if(lum > 0.5){ \n"
+        "       basic_out = albedo; \n"
+        "       hsv = rgb_to_hsv(basic_out.rgb); \n"
+        "   } else { \n"
+        "       hsv = shadow_color(albedo.rgb); \n"
+        "   } \n"
+        "   if(hsv[0] > 80.0 && hsv[0] < 275.0) hsv = cool_shift(hsv); \n"
+        "   else hsv = warm_shift(hsv); \n"
+        "   rgb = hsv_to_rgb(hsv); \n"
+        "   basic_out = vec4(rgb, 1.0); \n"
 		"}\n"
 	);
 	//As you can see above, adjacent strings in C/C++ are concatenated.

@@ -196,7 +196,9 @@ void PlantMode::draw_gradients_blur(GLuint basic_tex, GLuint color_tex,
     assert(gradient_tex_);
     auto &gradient_temp_tex = *gradient_temp_tex_;
     auto &gradient_tex = *gradient_tex_;
-    float w10[10] = {0.101253f, 0.098154f, 0.089414f, 0.076542f, 0.061573f, 0.046546f, 0.033065f, 0.022072f, 0.013846f, 0.008162f};
+
+    float threshold = 0.000005f;
+
     static GLuint fb = 0;
     if(fb == 0) glGenFramebuffers(1, &fb);
     glBindFramebuffer(GL_FRAMEBUFFER, fb);
@@ -225,14 +227,12 @@ void PlantMode::draw_gradients_blur(GLuint basic_tex, GLuint color_tex,
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, color_tex);
     glActiveTexture(GL_TEXTURE2);
-    glBindTexture(GL_TEXTURE_2D, gradient_temp_tex);
+    glBindTexture(GL_TEXTURE_2D, basic_tex);
     glActiveTexture(GL_TEXTURE3);
     glBindTexture(GL_TEXTURE_2D, depth_tex);
 
     glUseProgram(bilateralish_gradientH_program->program);
-    glUniform1f(bilateralish_gradientH_program->depth_threshold, 0.5);
-    glUniform1i(bilateralish_gradientH_program->blur_amount, 10);
-    glUniform1fv(bilateralish_gradientH_program->weights, 20, w10);
+    glUniform1f(bilateralish_gradientH_program->depth_threshold, threshold);
     glDrawArrays(GL_TRIANGLES, 0, 3);
     GL_ERRORS();
 
@@ -255,9 +255,7 @@ void PlantMode::draw_gradients_blur(GLuint basic_tex, GLuint color_tex,
     glBindTexture(GL_TEXTURE_2D, depth_tex);
 
     glUseProgram(bilateralish_gradientV_program->program);
-    glUniform1f(bilateralish_gradientV_program->depth_threshold, 0.5);
-    glUniform1i(bilateralish_gradientV_program->blur_amount, 10);
-    glUniform1fv(bilateralish_gradientV_program->weights, 20, w10);
+    glUniform1f(bilateralish_gradientV_program->depth_threshold, threshold);
     glDrawArrays(GL_TRIANGLES, 0, 3);
     GL_ERRORS();
 
