@@ -24,8 +24,11 @@ struct PlantMode : public Mode {
 	//draws out basic scene render, adjusted flat color fills with cell shading
 	void draw_scene(GLuint *basic_tex_, GLuint *color_tex_, GLuint *depth_tex_);
 	//draws out gradients
-	void draw_gradients(GLuint basic_tex, GLuint color_tex,
+	void draw_gradients_linfit(GLuint basic_tex, GLuint color_tex,
                         GLuint *gradient_tex_);
+    void draw_gradients_blur(GLuint basic_tex, GLuint color_tex,
+                        GLuint depth_tex,
+                        GLuint *gradient_temp_tex_, GLuint *gradient_tex_);
 	//paper textures
 	void draw_texture();
 	//screen tones in shadows

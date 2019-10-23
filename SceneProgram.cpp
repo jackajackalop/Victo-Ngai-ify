@@ -150,7 +150,7 @@ SceneProgram::SceneProgram() {
 		"	vec4 albedo = texture(TEX, texCoord) * color;\n"
 		//simple hemispherical lighting model:
 		"	vec3 light = mix(vec3(0.0,0.0,0.1), vec3(1.0,1.0,0.95), dot(n,l)*0.5+0.5);\n"
-		"	basic_out = vec4(light*albedo.rgb, albedo.a);\n"
+		"	basic_out = albedo;\n"//vec4(light*albedo.rgb, albedo.a);\n"
         "   color_out = albedo; \n"
 
         "   vec3 hsv = rgb_to_hsv(albedo.rgb); \n"

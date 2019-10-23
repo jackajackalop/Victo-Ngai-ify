@@ -1,9 +1,10 @@
 #include "PlantMode.hpp"
 
-#include "LitColorTextureProgram.hpp"
 #include "BoneLitColorTextureProgram.hpp"
 #include "CopyToScreenProgram.hpp"
 #include "SceneProgram.hpp"
+#include "GradientProgram.hpp"
+#include "BilateralishGradientProgram.hpp"
 #include "Load.hpp"
 #include "Mesh.hpp"
 #include "Scene.hpp"
@@ -25,8 +26,8 @@
 enum Stages {
     BASIC = 0,
     FLATS = 1,
-    GRADIENTS = 2,
-    CELSHADED = 3
+    GRADIENTS_BLUR = 2,
+    GRADIENTS_LINFIT = 3
 };
 
 int show = 1;
@@ -93,7 +94,9 @@ bool PlantMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size
         }else if(evt.key.keysym.scancode == SDL_SCANCODE_1){
             show = FLATS;
         }else if(evt.key.keysym.scancode == SDL_SCANCODE_2){
-            show = GRADIENTS;
+            show = GRADIENTS_BLUR;
+        }else if(evt.key.keysym.scancode == SDL_SCANCODE_3){
+            show = GRADIENTS_LINFIT;
         }
     }
 
@@ -111,6 +114,7 @@ struct Textures {
     GLuint color_tex = 0;
     GLuint depth_tex = 0;
     GLuint gradient_tex = 0;
+    GLuint gradient_temp_tex = 0;
     GLuint final_tex = 0;
     void allocate(glm::uvec2 const &new_size) {
         //allocate full-screen framebuffer:
@@ -134,6 +138,7 @@ struct Textures {
             alloc_tex(&color_tex, GL_RGBA8, GL_RGBA);
             alloc_tex(&depth_tex, GL_DEPTH_COMPONENT24, GL_DEPTH_COMPONENT);
             alloc_tex(&gradient_tex, GL_RGBA8, GL_RGBA);
+            alloc_tex(&gradient_temp_tex, GL_RGBA8, GL_RGBA);
             alloc_tex(&final_tex, GL_RGBA8, GL_RGBA);
             GL_ERRORS();
         }
@@ -180,13 +185,139 @@ void PlantMode::draw_scene(GLuint *basic_tex_, GLuint *color_tex_, GLuint *depth
 
     glUseProgram(scene_program->program);
     scene->draw(*camera);
+    glBindVertexArray(empty_vao);
     GL_ERRORS();
 }
 
-void PlantMode::draw_gradients(GLuint basic_tex, GLuint color_tex,
+void PlantMode::draw_gradients_blur(GLuint basic_tex, GLuint color_tex,
+        GLuint depth_tex, GLuint *gradient_temp_tex_, GLuint *gradient_tex_)
+{
+    assert(gradient_temp_tex_);
+    assert(gradient_tex_);
+    auto &gradient_temp_tex = *gradient_temp_tex_;
+    auto &gradient_tex = *gradient_tex_;
+    float w10[10] = {0.101253f, 0.098154f, 0.089414f, 0.076542f, 0.061573f, 0.046546f, 0.033065f, 0.022072f, 0.013846f, 0.008162f};
+    static GLuint fb = 0;
+    if(fb == 0) glGenFramebuffers(1, &fb);
+    glBindFramebuffer(GL_FRAMEBUFFER, fb);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                            gradient_temp_tex, 0);
+    GLenum bufs[1] = {GL_COLOR_ATTACHMENT0};
+    glDrawBuffers(1, bufs);
+    check_fb();
+
+    //set glViewport
+    glBindFramebuffer(GL_FRAMEBUFFER, fb);
+    glViewport(0, 0, textures.size.x, textures.size.y);
+    camera-> aspect = textures.size.x/float(textures.size.y);
+
+    GLfloat black[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+    glClearBufferfv(GL_COLOR, 0, black);
+
+    //set up basic OpenGL state:
+    glEnable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
+    glBlendEquation(GL_FUNC_ADD);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, basic_tex);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, color_tex);
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, gradient_temp_tex);
+    glActiveTexture(GL_TEXTURE3);
+    glBindTexture(GL_TEXTURE_2D, depth_tex);
+
+    glUseProgram(bilateralish_gradientH_program->program);
+    glUniform1f(bilateralish_gradientH_program->depth_threshold, 0.5);
+    glUniform1i(bilateralish_gradientH_program->blur_amount, 10);
+    glUniform1fv(bilateralish_gradientH_program->weights, 20, w10);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    GL_ERRORS();
+
+    static GLuint fb2 = 0;
+    if(fb2==0) glGenFramebuffers(1, &fb2);
+    glBindFramebuffer(GL_FRAMEBUFFER, fb2);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+            gradient_tex, 0);
+    bufs[1] = {GL_COLOR_ATTACHMENT0};
+    glDrawBuffers(1, bufs);
+    check_fb();
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, basic_tex);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, color_tex);
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, gradient_temp_tex);
+    glActiveTexture(GL_TEXTURE3);
+    glBindTexture(GL_TEXTURE_2D, depth_tex);
+
+    glUseProgram(bilateralish_gradientV_program->program);
+    glUniform1f(bilateralish_gradientV_program->depth_threshold, 0.5);
+    glUniform1i(bilateralish_gradientV_program->blur_amount, 10);
+    glUniform1fv(bilateralish_gradientV_program->weights, 20, w10);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    GL_ERRORS();
+
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glActiveTexture(GL_TEXTURE3);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    GL_ERRORS();
+}
+
+void PlantMode::draw_gradients_linfit(GLuint basic_tex, GLuint color_tex,
                                 GLuint *gradient_tex_)
 {
+    assert(gradient_tex_);
+    auto &gradient_tex = *gradient_tex_;
 
+    static GLuint fb = 0;
+    if(fb == 0) glGenFramebuffers(1, &fb);
+    glBindFramebuffer(GL_FRAMEBUFFER, fb);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                            gradient_tex, 0);
+    GLenum bufs[1] = {GL_COLOR_ATTACHMENT0};
+    glDrawBuffers(1, bufs);
+    check_fb();
+
+    //set glViewport
+    glBindFramebuffer(GL_FRAMEBUFFER, fb);
+    glViewport(0, 0, textures.size.x, textures.size.y);
+    camera-> aspect = textures.size.x/float(textures.size.y);
+
+    GLfloat black[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+    glClearBufferfv(GL_COLOR, 0, black);
+
+    //set up basic OpenGL state:
+    glEnable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
+    glBlendEquation(GL_FUNC_ADD);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, basic_tex);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, color_tex);
+
+    glUseProgram(gradient_program->program);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+    GL_ERRORS();
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    GL_ERRORS();
 }
 
 void PlantMode::draw_texture()
@@ -212,8 +343,14 @@ void PlantMode::draw(glm::uvec2 const &drawable_size) {
     textures.allocate(drawable_size);
 
     draw_scene(&textures.basic_tex, &textures.color_tex, &textures.depth_tex);
-    draw_gradients(textures.basic_tex, textures.color_tex,
-            &textures.gradient_tex);
+    if(show == GRADIENTS_BLUR){
+        draw_gradients_blur(textures.basic_tex, textures.color_tex,
+                textures.depth_tex,
+                &textures.gradient_temp_tex, &textures.gradient_tex);
+    }else{
+        draw_gradients_linfit(textures.basic_tex, textures.color_tex,
+                &textures.gradient_tex);
+    }
     draw_texture();
     draw_screentones();
     draw_lines();
@@ -227,9 +364,8 @@ void PlantMode::draw(glm::uvec2 const &drawable_size) {
         glBindTexture(GL_TEXTURE_2D, textures.basic_tex);
     }else if(show == FLATS){
         glBindTexture(GL_TEXTURE_2D, textures.color_tex);
-    }else if(show == GRADIENTS){
+    }else if(show == GRADIENTS_BLUR || show == GRADIENTS_LINFIT){
         glBindTexture(GL_TEXTURE_2D, textures.gradient_tex);
-    }else if(show == CELSHADED){
     }
 
     glDisable(GL_BLEND);
