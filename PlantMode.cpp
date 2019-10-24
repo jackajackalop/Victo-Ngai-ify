@@ -321,12 +321,40 @@ void PlantMode::cpu_gradient(GLuint basic_tex, GLuint color_tex){
     std::vector<GLfloat> pixels(width*height*4, 0.0f);
     glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, pixels.data());
     png_bytep row = (png_bytep)malloc(sizeof(png_byte)*width*4);
+    float prev_row[4*width];
     for(int y = height-1; y >= 0; y--) {
         for(int x = 0; x<width; x++){
-            row[x*4] = glm::clamp(int32_t(pixels[(x+y*width)*4]*255), 0, 255);
-            row[x*4+1] = glm::clamp(int32_t(pixels[(x+y*width)*4+1]*255), 0, 255);
-            row[x*4+2] = glm::clamp(int32_t(pixels[(x+y*width)*4+2]*255), 0, 255);
-            row[x*4+3] = glm::clamp(int32_t(pixels[(x+y*width)*4+3]*255), 0, 255);
+            int index = x+y*width;
+            int r = glm::clamp(int32_t(pixels[index*4]*255), 0, 255);
+            int g = glm::clamp(int32_t(pixels[index*4+1]*255), 0, 255);
+            int b = glm::clamp(int32_t(pixels[index*4+2]*255), 0, 255);
+            if(y > 0) index -= width;
+            int ri = glm::clamp(int32_t(pixels[index*4]*255), 0, 255);
+            int gi = glm::clamp(int32_t(pixels[index*4+1]*255), 0, 255);
+            int bi = glm::clamp(int32_t(pixels[index*4+2]*255), 0, 255);
+            int difference = abs(r-ri)+abs(g-gi)+abs(b-bi);
+            if(difference<10){
+                prev_row[x*4] += 0.1f;
+                prev_row[x*4+1] += 0.1f;
+                prev_row[x*4+1] += 0.1f;
+                ri = r-int(prev_row[x*4]);
+                gi = g-int(prev_row[x*4+1]);
+                bi = b-int(prev_row[x*4+2]);
+                r = glm::clamp(ri, 0, 255);;
+                g = glm::clamp(gi, 0, 255);;
+                b = glm::clamp(bi, 0, 255);;
+            }else{
+                prev_row[x*4] = 0;
+                prev_row[x*4+1] = 0;
+                prev_row[x*4+2] = 0;
+                prev_row[x*4+3] = 0;
+
+            }
+
+            row[x*4] = r;
+            row[x*4+1] = g;
+            row[x*4+2] = b;
+            row[x*4+3] = 255;
         }
         png_write_row(png, row);
     }
