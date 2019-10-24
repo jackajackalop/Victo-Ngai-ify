@@ -321,34 +321,33 @@ void PlantMode::cpu_gradient(GLuint basic_tex, GLuint color_tex){
     std::vector<GLfloat> pixels(width*height*4, 0.0f);
     glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, pixels.data());
     png_bytep row = (png_bytep)malloc(sizeof(png_byte)*width*4);
-    float prev_row[4*width];
+
+    std::map<std::string, float> prev;
     for(int y = height-1; y >= 0; y--) {
+        std::map<std::string, bool> incremented;
         for(int x = 0; x<width; x++){
             int index = x+y*width;
             int r = glm::clamp(int32_t(pixels[index*4]*255), 0, 255);
             int g = glm::clamp(int32_t(pixels[index*4+1]*255), 0, 255);
             int b = glm::clamp(int32_t(pixels[index*4+2]*255), 0, 255);
+
             if(y > 0) index -= width;
             int ri = glm::clamp(int32_t(pixels[index*4]*255), 0, 255);
             int gi = glm::clamp(int32_t(pixels[index*4+1]*255), 0, 255);
             int bi = glm::clamp(int32_t(pixels[index*4+2]*255), 0, 255);
             int difference = abs(r-ri)+abs(g-gi)+abs(b-bi);
+            std::string color_key = std::to_string(r)+std::to_string(g)
+                            +std::to_string(b);
             if(difference<10){
-                prev_row[x*4] += 0.1f;
-                prev_row[x*4+1] += 0.1f;
-                prev_row[x*4+1] += 0.1f;
-                ri = r-int(prev_row[x*4]);
-                gi = g-int(prev_row[x*4+1]);
-                bi = b-int(prev_row[x*4+2]);
+                if(!incremented[color_key]) prev[color_key] += 0.15f;
+                incremented[color_key] = true;
+                int delta = int(prev[color_key]);
+                ri = r-delta;
+                gi = g-delta;
+                bi = b-delta;
                 r = glm::clamp(ri, 0, 255);;
                 g = glm::clamp(gi, 0, 255);;
                 b = glm::clamp(bi, 0, 255);;
-            }else{
-                prev_row[x*4] = 0;
-                prev_row[x*4+1] = 0;
-                prev_row[x*4+2] = 0;
-                prev_row[x*4+3] = 0;
-
             }
 
             row[x*4] = r;
