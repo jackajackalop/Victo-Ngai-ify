@@ -77,11 +77,7 @@ GLuint load_texture(std::string const &filename) {
 	return tex;
 }
 
-//texture for the platform in the test scene
-Load< GLuint > gradient_png_tex(LoadTagDefault, [](){
-	return new GLuint(load_texture(data_path("gradient.png")));
-});
-
+GLuint gradient_png_tex = load_texture(data_path("gradient.png"));
 
 PlantMode::PlantMode() {
     assert(scene->cameras.size() && "Scene requires a camera.");
@@ -361,6 +357,7 @@ void PlantMode::cpu_gradient(GLuint basic_tex, GLuint color_tex){
 
     free(row);
     fclose(output);
+    gradient_png_tex = load_texture(data_path("gradient.png"));
 }
 
 void PlantMode::draw_gradients_linfit(GLuint basic_tex, GLuint color_tex,
@@ -395,7 +392,7 @@ void PlantMode::draw_gradients_linfit(GLuint basic_tex, GLuint color_tex,
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, *gradient_png_tex);
+    glBindTexture(GL_TEXTURE_2D, gradient_png_tex);
 
     glUseProgram(gradient_program->program);
     glDrawArrays(GL_TRIANGLES, 0, 3);
