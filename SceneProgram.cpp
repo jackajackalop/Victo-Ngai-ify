@@ -28,7 +28,6 @@ Load< SceneProgram > scene_program(LoadTagEarly, []() -> SceneProgram const * {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glBindTexture(GL_TEXTURE_2D, 0);
 
-
 	scene_program_pipeline.textures[0].texture = tex;
 	scene_program_pipeline.textures[0].target = GL_TEXTURE_2D;
 
@@ -62,6 +61,8 @@ SceneProgram::SceneProgram() {
 		//fragment shader:
 		"#version 330\n"
 		"uniform sampler2D TEX;\n"
+        "uniform sampler3D lut_tex; \n"
+        "uniform int lut_size; \n"
 		"in vec3 position;\n"
 		"in vec3 normal;\n"
 		"in vec4 color;\n"
@@ -159,7 +160,12 @@ SceneProgram::SceneProgram() {
 		"	vec3 light = mix(vec3(0.0,0.0,0.1), vec3(1.0,1.0,0.95), dot(n,l)*0.5+0.5);\n"
         "   color_out = albedo; \n"
 		"	basic_out = vec4(light*albedo.rgb, albedo.a);\n"
-        "   float lum = max(max(basic_out.r, basic_out.g), basic_out.b); \n"
+        "   vec3 scale = vec3(lut_size - 1.0)/lut_size; \n"
+        "   vec3 offset = vec3(1.0/(2.0*lut_size)); \n"
+       // "   vec3 lut_color = texture(lut_tex, scale*albedo.rgb+offset).rgb; \n"
+        "   vec3 lut_color = texture(lut_tex, vec3(1,1,1)).rgb; \n"
+        "   color_out = vec4(lut_color, 1.0); \n"
+       /* "   float lum = max(max(basic_out.r, basic_out.g), basic_out.b); \n"
 
         "   vec3 hsv = rgb_to_hsv(color_out.rgb); \n"
         "   if(hsv[0] > 80.0 && hsv[0] < 275.0) hsv = cool_shift(hsv); \n"
@@ -176,7 +182,7 @@ SceneProgram::SceneProgram() {
         "   if(hsv[0] > 80.0 && hsv[0] < 275.0) hsv = cool_shift(hsv); \n"
         "   else hsv = warm_shift(hsv); \n"
         "   rgb = hsv_to_rgb(hsv); \n"
-        "   basic_out = vec4(rgb, 1.0); \n"
+        "   basic_out = vec4(rgb, 1.0); \n"*/
 		"}\n"
 	);
 	//As you can see above, adjacent strings in C/C++ are concatenated.
@@ -192,12 +198,14 @@ SceneProgram::SceneProgram() {
 	OBJECT_TO_CLIP_mat4 = glGetUniformLocation(program, "OBJECT_TO_CLIP");
 	OBJECT_TO_LIGHT_mat4x3 = glGetUniformLocation(program, "OBJECT_TO_LIGHT");
 	NORMAL_TO_LIGHT_mat3 = glGetUniformLocation(program, "NORMAL_TO_LIGHT");
+    lut_size = glGetUniformLocation(program, "lut_size");
 	GLuint TEX_sampler2D = glGetUniformLocation(program, "TEX");
 
 	//set TEX to always refer to texture binding zero:
 	glUseProgram(program); //bind program -- glUniform* calls refer to this program now
 
 	glUniform1i(TEX_sampler2D, 0); //set TEX to sample from GL_TEXTURE0
+	glUniform1i(glGetUniformLocation(program, "lut_tex"), 1);
 
 	glUseProgram(0); //unbind program -- glUniform* calls refer to ??? now
 }

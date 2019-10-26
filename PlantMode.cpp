@@ -32,8 +32,10 @@ enum Stages {
 };
 
 int show = 1;
+int lut_size = 64;
 
 GLuint meshes_for_scene_program = 0;
+
 static Load< MeshBuffer > meshes(LoadTagDefault, []() -> MeshBuffer const * {
         MeshBuffer *ret = new MeshBuffer(data_path("rat_girl.pnct"));
         meshes_for_scene_program = ret->make_vao_for_program(scene_program->program);
@@ -46,7 +48,6 @@ static Load< Scene > scene(LoadTagLate, []() -> Scene const * {
                 auto &mesh = meshes->lookup(mesh_name);
                 scene.drawables.emplace_back(transform);
                 Scene::Drawable::Pipeline &pipeline = scene.drawables.back().pipeline;
-
                 pipeline = scene_program_pipeline;
                 pipeline.vao = meshes_for_scene_program;
                 pipeline.type = mesh.type;
@@ -55,7 +56,6 @@ static Load< Scene > scene(LoadTagLate, []() -> Scene const * {
                 });
         return ret;
         });
-
 
 GLuint load_texture(std::string const &filename) {
 	glm::uvec2 size;
@@ -77,7 +77,52 @@ GLuint load_texture(std::string const &filename) {
 	return tex;
 }
 
+//referenced this https://github.com/youandhubris/GPU-LUT-OpenFrameworks
+GLuint load_LUT(std::string const &filename) {
+    struct RGB { float r, g, b; };
+    std::vector<RGB> LUT;
+
+    std::ifstream LUTfile(filename.c_str());
+    if (!LUTfile) {
+		throw std::runtime_error("Failed to open LUT file '" + filename + "'.");
+	}
+
+    while(!LUTfile.eof()){
+        std::string LUTline;
+        getline(LUTfile, LUTline);
+        if(!LUTline.empty()){
+            RGB l;
+            if (sscanf(LUTline.c_str(), "%f %f %f", &l.r, &l.g, &l.b) == 3){
+                LUT.push_back(l);
+            }
+        }
+    }
+    if (LUT.size() != pow(lut_size, 3.0)) {
+		throw std::runtime_error("LUT size is wrong");
+	}
+
+    GLuint tex = 0;
+    glEnable(GL_TEXTURE_3D);
+
+    glGenTextures(1, &tex);
+    glBindTexture(GL_TEXTURE_3D, tex);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_REPEAT);
+    glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB, lut_size, lut_size, lut_size, 0,
+            GL_RGB, GL_FLOAT, &LUT[0]);
+
+    glBindTexture(GL_TEXTURE_3D, 0);
+    glDisable(GL_TEXTURE_3D);
+
+    return tex;
+}
+
+
 GLuint gradient_png_tex = load_texture(data_path("gradient.png"));
+GLuint lut_tex = load_LUT(data_path("lut.cube"));
 
 PlantMode::PlantMode() {
     assert(scene->cameras.size() && "Scene requires a camera.");
@@ -207,7 +252,10 @@ void PlantMode::draw_scene(GLuint *basic_tex_, GLuint *color_tex_, GLuint *depth
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
 
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, lut_tex);
     glUseProgram(scene_program->program);
+    glUniform1i(scene_program->lut_size, lut_size);
     scene->draw(*camera);
     glBindVertexArray(empty_vao);
     GL_ERRORS();
