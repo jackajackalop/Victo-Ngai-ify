@@ -42,6 +42,11 @@ static Load< MeshBuffer > meshes(LoadTagDefault, []() -> MeshBuffer const * {
         return ret;
         });
 
+GLuint load_LUT(std::string const &filename);
+static Load< GLuint > lut_tex(LoadTagDefault, []() -> GLuint const *{
+        return new GLuint(load_LUT(data_path("lut.cube")));
+        });
+
 static Load< Scene > scene(LoadTagLate, []() -> Scene const * {
         Scene *ret = new Scene();
         ret->load(data_path("rat_girl.scene"), [](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
@@ -99,7 +104,7 @@ GLuint load_LUT(std::string const &filename) {
     GLuint tex = 0;
     glGenTextures(1, &tex);
 
-    glEnable(GL_TEXTURE_3D);
+    GL_ERRORS();
     glBindTexture(GL_TEXTURE_3D, tex);
     glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB, lut_size, lut_size, lut_size, 0,
             GL_RGB, GL_FLOAT, LUT.data());
@@ -108,10 +113,8 @@ GLuint load_LUT(std::string const &filename) {
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_REPEAT);
-    glGenerateMipmap(GL_TEXTURE_3D);
 
     glBindTexture(GL_TEXTURE_3D, 0);
-    glDisable(GL_TEXTURE_3D);
     GL_ERRORS();
 
     return tex;
@@ -119,7 +122,6 @@ GLuint load_LUT(std::string const &filename) {
 
 
 GLuint gradient_png_tex = 0;// load_texture(data_path("gradient.png"));
-GLuint lut_tex = load_LUT(data_path("lut.cube"));
 
 PlantMode::PlantMode() {
     assert(scene->cameras.size() && "Scene requires a camera.");
@@ -258,7 +260,7 @@ void PlantMode::draw_scene(GLuint *basic_tex_, GLuint *color_tex_,
     glCullFace(GL_BACK);
 
     glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, lut_tex);
+    glBindTexture(GL_TEXTURE_3D, *lut_tex);
     glUseProgram(scene_program->program);
     glUniform1i(scene_program->lut_size, lut_size);
     scene->draw(*camera);
