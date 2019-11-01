@@ -30,7 +30,7 @@ struct PlantMode : public Mode {
     void draw_gradients_blur(GLuint basic_tex, GLuint color_tex,
                         GLuint depth_tex,
                         GLuint *gradient_temp_tex_, GLuint *gradient_tex_);
-    void cpu_gradient(GLuint basic_tex, GLuint color_tex);
+    void cpu_gradient(GLuint basic_tex, GLuint color_tex, GLuint id_tex);
 	//paper textures
 	void draw_texture();
 	//screen tones in shadows

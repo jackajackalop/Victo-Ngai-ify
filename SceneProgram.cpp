@@ -164,12 +164,12 @@ SceneProgram::SceneProgram() {
 		"	vec3 light = mix(vec3(0.0,0.0,0.1), vec3(1.0,1.0,0.95), dot(n,l)*0.5+0.5);\n"
         "   color_out = albedo; \n"
 		"	basic_out = vec4(light*albedo.rgb, albedo.a);\n"
-       /* "   vec3 scale = vec3(lut_size - 1.0)/lut_size; \n"
+        "   vec3 scale = vec3(lut_size - 1.0)/lut_size; \n"
         "   vec3 offset = vec3(1.0/(2.0*lut_size)); \n"
-        "   vec3 lut_color = texture(lut_tex, scale*albedo.rgb+offset).rgb; \n"
-        "   vec3 lut_color = texture(lut_tex, vec3(1,1,1)).rgb; \n"
-        "   color_out = vec4(lut_color, 1.0); \n"
-        */
+        //"   vec3 lut_color = texture(lut_tex, scale*albedo.rgb+offset).rgb; \n"
+        //"   vec3 lut_color = texture(lut_tex, vec3(0.5,0.5,0.5)).rgb; \n"
+        //"   color_out = vec4(lut_color, 1.0); \n"
+
         "   float lum = max(max(basic_out.r, basic_out.g), basic_out.b); \n"
 
         "   vec3 hsv = rgb_to_hsv(color_out.rgb); \n"

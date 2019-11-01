@@ -107,7 +107,7 @@ if $(OS) = NT { #Windows
 } else if $(OS) = LINUX { #Linux
 	NEST_LIBS = ../nest-libs/linux ;
 	C++ = g++ -no-pie ;
-	C++FLAGS = -std=c++17 -g -Wall -Werror ;
+	C++FLAGS = -std=c++17 -g -Wall -Werror ; #-fsanitize=address ;
 	LINK = g++ -no-pie ;
 	LINKFLAGS = -std=c++17 -g -Wall -Werror ;
 	LINKLIBS = ;

@@ -76,7 +76,7 @@ GLuint load_texture(int width, int height, std::vector<GLfloat> data) {
 //referenced this https://github.com/youandhubris/GPU-LUT-OpenFrameworks
 GLuint load_LUT(std::string const &filename) {
     struct RGB { float r, g, b; };
-    std::vector<RGB> LUT;
+    std::vector<float> LUT;
 
     std::ifstream LUTfile(filename.c_str());
     if (!LUTfile) {
@@ -89,29 +89,30 @@ GLuint load_LUT(std::string const &filename) {
         if(!LUTline.empty()){
             RGB l;
             if (sscanf(LUTline.c_str(), "%f %f %f", &l.r, &l.g, &l.b) == 3){
-                LUT.push_back(l);
+                LUT.emplace_back(l.r);
+                LUT.emplace_back(l.g);
+                LUT.emplace_back(l.b);
             }
         }
     }
-    if (LUT.size() != pow(lut_size, 3.0)) {
-		throw std::runtime_error("LUT size is wrong");
-	}
 
     GLuint tex = 0;
-    glEnable(GL_TEXTURE_3D);
-
     glGenTextures(1, &tex);
+
+    glEnable(GL_TEXTURE_3D);
     glBindTexture(GL_TEXTURE_3D, tex);
+    glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB, lut_size, lut_size, lut_size, 0,
+            GL_RGB, GL_FLOAT, LUT.data());
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_REPEAT);
-    glTexImage3D(GL_TEXTURE_3D, 0, GL_RGB, lut_size, lut_size, lut_size, 0,
-            GL_RGB, GL_FLOAT, &LUT[0]);
+    glGenerateMipmap(GL_TEXTURE_3D);
 
     glBindTexture(GL_TEXTURE_3D, 0);
     glDisable(GL_TEXTURE_3D);
+    GL_ERRORS();
 
     return tex;
 }
@@ -348,47 +349,69 @@ void PlantMode::draw_gradients_blur(GLuint basic_tex, GLuint color_tex,
     GL_ERRORS();
 }
 
-void PlantMode::cpu_gradient(GLuint basic_tex, GLuint color_tex){
+void PlantMode::cpu_gradient(GLuint basic_tex, GLuint color_tex,
+                            GLuint id_tex){
     int width = textures.size.x;
     int height = textures.size.y;
 
-    glBindTexture(GL_TEXTURE_2D, color_tex);
     std::vector<GLfloat> pixels(width*height*4, 0.0f);
+    glBindTexture(GL_TEXTURE_2D, color_tex);
     glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, pixels.data());
+
+    std::vector<GLfloat> ids(width*height*4, 0.0f);
+    glBindTexture(GL_TEXTURE_2D, id_tex);
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, ids.data());
+
     std::vector<GLfloat> gradient(width*height*4, 0.0f);
 
-    std::map<std::string, float> prev;
-    for(int y = height-1; y >= 0; y--) {
-        std::map<std::string, bool> incremented;
+    //first calculate linear fit gradient equations
+    //y is value, x is the height in the screen
+    //the following values are calculated for each object in the scene and
+    //is stored at the index of the id assigned to the object
+    int num_objects = scene->drawables.size();
+    std::vector<float> xsum (num_objects, 0.0f);
+    std::vector<float> ysum (num_objects, 0.0f);
+    std::vector<float> xysum (num_objects, 0.0f);
+    std::vector<float> x2sum (num_objects, 0.0f);
+    std::vector<float> y2sum (num_objects, 0.0f);
+    std::vector<int> n (num_objects, 0);
+
+    for(int y = 0; y<height; y++) {
+        for(int x = 0; x<width; x++){
+            int index = x+y*width;
+            float r = pixels[index*4];
+            float g = pixels[index*4+1];
+            float b = pixels[index*4+2];
+            float value = glm::max(glm::max(r, g), b);
+            int id = ids[index*4]*255;
+
+            xsum[id] += y;
+            ysum[id] += value;
+            xysum[id] += y*value;
+            x2sum[id] += y*y;
+            y2sum[id] += value*value;
+            n[id]++;
+        }
+    }
+
+    for(int y = 0; y<height; y++){
         for(int x = 0; x<width; x++){
             int index = x+y*width;
             float r = pixels[index*4];
             float g = pixels[index*4+1];
             float b = pixels[index*4+2];
 
-            if(y > 0) index -= width;
-            float ri = pixels[index*4];
-            float gi = pixels[index*4+1];
-            float bi = pixels[index*4+2];
-            float difference = abs(r-ri)+abs(g-gi)+abs(b-bi);
-            std::string color_key = std::to_string(r)+std::to_string(g)
-                            +std::to_string(b);
-            if(difference<0.1){
-                if(!incremented[color_key]) prev[color_key] += 0.001f;
-                incremented[color_key] = true;
-                float delta = prev[color_key];
-                ri = r-delta;
-                gi = g-delta;
-                bi = b-delta;
-                r = glm::clamp(ri, 0.0f, 1.0f);;
-                g = glm::clamp(gi, 0.0f, 1.0f);;
-                b = glm::clamp(bi, 0.0f, 1.0f);;
-            }
+            int id = ids[index*4]*255;
+            float slope = ((n[id]*xysum[id]) - (xsum[id]*ysum[id]))/
+                      ((n[id]*x2sum[id]) - (xsum[id]*xsum[id]));
+            float intercept = ((x2sum[id]*ysum[id]) - (xsum[id]*xysum[id]))/
+                      ((n[id]*x2sum[id]) - (xsum[id]*xsum[id]));
+            float gradient_val = slope*y+intercept;
 
-            gradient[index*4] = r;
-            gradient[index*4+1] = g;
-            gradient[index*4+2] = b;
-            gradient[index*4+3] = 1.0;
+            gradient[index*4] = r*gradient_val;
+            gradient[index*4+1] = g*gradient_val;
+            gradient[index*4+2] = b*gradient_val;
+            gradient[index*4+3] = 1.0f;
         }
     }
     gradient_png_tex = load_texture(width, height, gradient);
@@ -400,7 +423,7 @@ void PlantMode::draw_gradients_linfit(GLuint basic_tex, GLuint color_tex,
     assert(gradient_tex_);
     auto &gradient_tex = *gradient_tex_;
 
-    cpu_gradient(basic_tex, color_tex);
+    cpu_gradient(basic_tex, color_tex, id_tex);
 
     static GLuint fb = 0;
     if(fb == 0) glGenFramebuffers(1, &fb);
