@@ -22,6 +22,7 @@ struct SceneProgram {
 	GLuint OBJECT_TO_LIGHT_mat4x3 = -1U;
 	GLuint NORMAL_TO_LIGHT_mat3 = -1U;
     GLuint lut_size = -1U;
+    GLuint id = -1U;
 
 	//Textures:
 	//TEXTURE0 - texture that is accessed by TexCoord

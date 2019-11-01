@@ -1,4 +1,5 @@
 #include "Scene.hpp"
+#include "SceneProgram.hpp"
 
 #include "gl_errors.hpp"
 #include "read_write_chunk.hpp"
@@ -78,6 +79,7 @@ void Scene::draw(Camera const &camera) const {
 void Scene::draw(glm::mat4 const &world_to_clip, glm::mat4x3 const &world_to_light) const {
 
 	//Iterate through all drawables, sending each one to OpenGL:
+    int id = 0;
 	for (auto const &drawable : drawables) {
 		//Reference to drawable's pipeline for convenience:
 		Scene::Drawable::Pipeline const &pipeline = drawable.pipeline;
@@ -122,6 +124,8 @@ void Scene::draw(glm::mat4 const &world_to_clip, glm::mat4x3 const &world_to_lig
 
 		//set any requested custom uniforms:
 		if (pipeline.set_uniforms) pipeline.set_uniforms();
+        glUniform1i(scene_program->id, id);
+        id++;
 
 		//set up textures:
 		for (uint32_t i = 0; i < Drawable::Pipeline::TextureCount; ++i) {

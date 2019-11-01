@@ -57,15 +57,11 @@ static Load< Scene > scene(LoadTagLate, []() -> Scene const * {
         return ret;
         });
 
-GLuint load_texture(std::string const &filename) {
-	glm::uvec2 size;
-	std::vector< glm::u8vec4 > data;
-	load_png(filename, &size, &data, LowerLeftOrigin);
-
+GLuint load_texture(int width, int height, std::vector<GLfloat> data) {
 	GLuint tex = 0;
 	glGenTextures(1, &tex);
 	glBindTexture(GL_TEXTURE_2D, tex);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, size.x, size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, data.data());
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, data.data());
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -121,7 +117,7 @@ GLuint load_LUT(std::string const &filename) {
 }
 
 
-GLuint gradient_png_tex = load_texture(data_path("gradient.png"));
+GLuint gradient_png_tex = 0;// load_texture(data_path("gradient.png"));
 GLuint lut_tex = load_LUT(data_path("lut.cube"));
 
 PlantMode::PlantMode() {
@@ -181,6 +177,7 @@ struct Textures {
 
     GLuint basic_tex = 0;
     GLuint color_tex = 0;
+    GLuint id_tex = 0;
     GLuint depth_tex = 0;
     GLuint gradient_tex = 0;
     GLuint gradient_temp_tex = 0;
@@ -205,6 +202,7 @@ struct Textures {
 
             alloc_tex(&basic_tex, GL_RGBA8, GL_RGBA);
             alloc_tex(&color_tex, GL_RGBA8, GL_RGBA);
+            alloc_tex(&id_tex, GL_RGBA8, GL_RGBA);
             alloc_tex(&depth_tex, GL_DEPTH_COMPONENT24, GL_DEPTH_COMPONENT);
             alloc_tex(&gradient_tex, GL_RGBA8, GL_RGBA);
             alloc_tex(&gradient_temp_tex, GL_RGBA8, GL_RGBA);
@@ -216,13 +214,16 @@ struct Textures {
 } textures;
 
 
-void PlantMode::draw_scene(GLuint *basic_tex_, GLuint *color_tex_, GLuint *depth_tex_)
+void PlantMode::draw_scene(GLuint *basic_tex_, GLuint *color_tex_,
+        GLuint *id_tex_, GLuint *depth_tex_)
 {
     assert(basic_tex_);
     assert(color_tex_);
+    assert(id_tex_);
     assert(depth_tex_);
     auto &basic_tex = *basic_tex_;
     auto &color_tex = *color_tex_;
+    auto &id_tex = *id_tex_;
     auto &depth_tex = *depth_tex_;
 
     static GLuint fb = 0;
@@ -232,10 +233,13 @@ void PlantMode::draw_scene(GLuint *basic_tex_, GLuint *color_tex_, GLuint *depth
             basic_tex, 0);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D,
             color_tex, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D,
+            id_tex, 0);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
             depth_tex, 0);
-    GLenum bufs[2] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
-    glDrawBuffers(2, bufs);
+    GLenum bufs[3] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1,
+                    GL_COLOR_ATTACHMENT2};
+    glDrawBuffers(3, bufs);
     check_fb();
 
     //Draw scene:
@@ -345,71 +349,53 @@ void PlantMode::draw_gradients_blur(GLuint basic_tex, GLuint color_tex,
 }
 
 void PlantMode::cpu_gradient(GLuint basic_tex, GLuint color_tex){
-    FILE *output = fopen("dist/gradient.png", "wb");
     int width = textures.size.x;
     int height = textures.size.y;
-
-    if(!output) return;
-    png_structp png = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
-    if (!png) return;
-    png_infop info = png_create_info_struct(png);
-    if(!info) return;
-    if(setjmp(png_jmpbuf(png))) return;
-    png_init_io(png, output);
-    png_set_IHDR(png, info, width, height, 8,
-            PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE,
-            PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
-    png_write_info(png, info);
 
     glBindTexture(GL_TEXTURE_2D, color_tex);
     std::vector<GLfloat> pixels(width*height*4, 0.0f);
     glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, pixels.data());
-    png_bytep row = (png_bytep)malloc(sizeof(png_byte)*width*4);
+    std::vector<GLfloat> gradient(width*height*4, 0.0f);
 
     std::map<std::string, float> prev;
     for(int y = height-1; y >= 0; y--) {
         std::map<std::string, bool> incremented;
         for(int x = 0; x<width; x++){
             int index = x+y*width;
-            int r = glm::clamp(int32_t(pixels[index*4]*255), 0, 255);
-            int g = glm::clamp(int32_t(pixels[index*4+1]*255), 0, 255);
-            int b = glm::clamp(int32_t(pixels[index*4+2]*255), 0, 255);
+            float r = pixels[index*4];
+            float g = pixels[index*4+1];
+            float b = pixels[index*4+2];
 
             if(y > 0) index -= width;
-            int ri = glm::clamp(int32_t(pixels[index*4]*255), 0, 255);
-            int gi = glm::clamp(int32_t(pixels[index*4+1]*255), 0, 255);
-            int bi = glm::clamp(int32_t(pixels[index*4+2]*255), 0, 255);
-            int difference = abs(r-ri)+abs(g-gi)+abs(b-bi);
+            float ri = pixels[index*4];
+            float gi = pixels[index*4+1];
+            float bi = pixels[index*4+2];
+            float difference = abs(r-ri)+abs(g-gi)+abs(b-bi);
             std::string color_key = std::to_string(r)+std::to_string(g)
                             +std::to_string(b);
-            if(difference<10){
-                if(!incremented[color_key]) prev[color_key] += 0.15f;
+            if(difference<0.1){
+                if(!incremented[color_key]) prev[color_key] += 0.001f;
                 incremented[color_key] = true;
-                int delta = int(prev[color_key]);
+                float delta = prev[color_key];
                 ri = r-delta;
                 gi = g-delta;
                 bi = b-delta;
-                r = glm::clamp(ri, 0, 255);;
-                g = glm::clamp(gi, 0, 255);;
-                b = glm::clamp(bi, 0, 255);;
+                r = glm::clamp(ri, 0.0f, 1.0f);;
+                g = glm::clamp(gi, 0.0f, 1.0f);;
+                b = glm::clamp(bi, 0.0f, 1.0f);;
             }
 
-            row[x*4] = r;
-            row[x*4+1] = g;
-            row[x*4+2] = b;
-            row[x*4+3] = 255;
+            gradient[index*4] = r;
+            gradient[index*4+1] = g;
+            gradient[index*4+2] = b;
+            gradient[index*4+3] = 1.0;
         }
-        png_write_row(png, row);
     }
-    png_write_end(png, NULL);
-
-    free(row);
-    fclose(output);
-    gradient_png_tex = load_texture(data_path("gradient.png"));
+    gradient_png_tex = load_texture(width, height, gradient);
 }
 
 void PlantMode::draw_gradients_linfit(GLuint basic_tex, GLuint color_tex,
-                                GLuint *gradient_tex_)
+                                GLuint id_tex, GLuint *gradient_tex_)
 {
     assert(gradient_tex_);
     auto &gradient_tex = *gradient_tex_;
@@ -474,14 +460,15 @@ void PlantMode::draw_vignette(){
 void PlantMode::draw(glm::uvec2 const &drawable_size) {
     textures.allocate(drawable_size);
 
-    draw_scene(&textures.basic_tex, &textures.color_tex, &textures.depth_tex);
+    draw_scene(&textures.basic_tex, &textures.color_tex, &textures.id_tex,
+            &textures.depth_tex);
     if(show == GRADIENTS_BLUR){
         draw_gradients_blur(textures.basic_tex, textures.color_tex,
                 textures.depth_tex,
                 &textures.gradient_temp_tex, &textures.gradient_tex);
     }else{
         draw_gradients_linfit(textures.basic_tex, textures.color_tex,
-                &textures.gradient_tex);
+                textures.id_tex, &textures.gradient_tex);
     }
     draw_texture();
     draw_screentones();
