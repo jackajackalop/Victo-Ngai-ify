@@ -35,6 +35,11 @@ int show = 1;
 int lut_size = 64;
 
 GLuint meshes_for_scene_program = 0;
+Scene::Transform *camera_parent_transform = nullptr;
+Scene::Camera *camera = nullptr;
+glm::vec2 camera_spin = glm::vec2(0.0f, 0.0f);
+glm::vec3 camera_shift = glm::vec3(0.0f, 0.0f, 0.0f);
+
 
 static Load< MeshBuffer > meshes(LoadTagDefault, []() -> MeshBuffer const * {
         MeshBuffer *ret = new MeshBuffer(data_path("rat_girl.pnct"));
@@ -59,6 +64,27 @@ static Load< Scene > scene(LoadTagLate, []() -> Scene const * {
                 pipeline.start = mesh.start;
                 pipeline.count = mesh.count;
                 });
+
+
+	    //look up camera parent transform:
+    	for (auto t = ret->transforms.begin(); t != ret->transforms.end(); ++t) {
+	    	if (t->name == "CameraParent") {
+		    	if (camera_parent_transform) throw std::runtime_error("Multiple 'CameraParent' transforms in scene.");
+    			camera_parent_transform = &(*t);
+	    	}
+	    }
+	    if (!camera_parent_transform) throw std::runtime_error("No 'CameraParent' transform in scene.");
+        camera_shift = camera_parent_transform->position;
+
+	//look up the camera:
+    	for (auto c = ret->cameras.begin(); c != ret->cameras.end(); ++c) {
+	    	if (c->transform->name == "Camera") {
+    			if (camera) throw std::runtime_error("Multiple 'Camera' objects in scene.");
+			    camera = &(*c);
+		    }
+	    }
+    	if (!camera) throw std::runtime_error("No 'Camera' camera in scene.");
+
         return ret;
         });
 
@@ -121,12 +147,9 @@ GLuint load_LUT(std::string const &filename) {
 }
 
 
-GLuint gradient_png_tex = 0;// load_texture(data_path("gradient.png"));
+GLuint gradient_png_tex = 0;
 
 PlantMode::PlantMode() {
-    assert(scene->cameras.size() && "Scene requires a camera.");
-
-    camera = const_cast< Scene::Camera *> (&scene->cameras.front());
 }
 
 PlantMode::~PlantMode() {
@@ -137,27 +160,29 @@ bool PlantMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size
     if (evt.type == SDL_KEYDOWN && evt.key.repeat) {
         return false;
     }
+
+    if (evt.type == SDL_MOUSEMOTION) {
+		if (evt.motion.state & SDL_BUTTON(SDL_BUTTON_LEFT)) {
+			camera_spin.x -= 3.0*evt.motion.xrel / float(window_size.x);
+			camera_spin.y -= 3.0*evt.motion.yrel / float(window_size.y);
+			return true;
+		} else if (evt.motion.state & SDL_BUTTON(SDL_BUTTON_RIGHT)) {
+            camera_shift.x -= 100.0*evt.motion.xrel / float(window_size.x);
+			camera_shift.z += 100.0*evt.motion.yrel / float(window_size.y);
+			return true;
+		}
+	}
+
+    if(evt.type == SDL_MOUSEWHEEL) {
+        if(evt.wheel.y > 0){
+            camera_shift.y += 4000.0*evt.wheel.y / float(window_size.x);
+        }else if(evt.wheel.y < 0) {
+            camera_shift.y += 4000.0*evt.wheel.y / float(window_size.x);
+        }
+    }
+
     if(evt.type == SDL_KEYDOWN){
-        glm::mat3 directions = glm::mat3_cast(camera->transform->rotation);
-        if(evt.key.keysym.scancode == SDL_SCANCODE_Q){
-            glm::vec3 step = -5.0f * directions[2];
-            camera->transform->position+=step;
-        }else if(evt.key.keysym.scancode == SDL_SCANCODE_E){
-            glm::vec3 step = 5.0f * directions[2];
-            camera->transform->position+=step;
-        }else if(evt.key.keysym.scancode == SDL_SCANCODE_W){
-            glm::vec3 step = 5.0f * directions[1];
-            camera->transform->position+=step;
-        }else if(evt.key.keysym.scancode == SDL_SCANCODE_S){
-            glm::vec3 step = -5.0f * directions[1];
-            camera->transform->position+=step;
-        }else if(evt.key.keysym.scancode == SDL_SCANCODE_A){
-            glm::vec3 step = -5.0f * directions[0];
-            camera->transform->position+=step;
-        }else if(evt.key.keysym.scancode == SDL_SCANCODE_D){
-            glm::vec3 step = 5.0f * directions[0];
-            camera->transform->position+=step;
-        }else if(evt.key.keysym.scancode == SDL_SCANCODE_0){
+        if(evt.key.keysym.scancode == SDL_SCANCODE_0){
             show = BASIC;
         }else if(evt.key.keysym.scancode == SDL_SCANCODE_1){
             show = FLATS;
@@ -172,6 +197,10 @@ bool PlantMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size
 }
 
 void PlantMode::update(float elapsed) {
+    camera_parent_transform->rotation = glm::angleAxis(camera_spin.x, glm::vec3(0.0f, 0.0f, 1.0f))
+                    *glm::angleAxis(camera_spin.y, glm::vec3(1.0, 0.0, 0.0));
+    camera_parent_transform->position = camera_shift;
+
 }
 
 //This code allocates and resizes them as needed:
@@ -423,8 +452,6 @@ void PlantMode::draw_gradients_linfit(GLuint basic_tex, GLuint color_tex,
     assert(gradient_tex_);
     auto &gradient_tex = *gradient_tex_;
 
-    cpu_gradient(basic_tex, color_tex, id_tex);
-
     static GLuint fb = 0;
     if(fb == 0) glGenFramebuffers(1, &fb);
     glBindFramebuffer(GL_FRAMEBUFFER, fb);
@@ -448,16 +475,18 @@ void PlantMode::draw_gradients_linfit(GLuint basic_tex, GLuint color_tex,
     glBlendEquation(GL_FUNC_ADD);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, gradient_png_tex);
+    int chunk_num = scene->drawables.size();
+    float xsum[chunk_num];
+    GLuint xsum_ssbo;
+    glGenBuffers(1, &xsum_ssbo);
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, xsum_ssbo);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(xsum), xsum, GL_DYNAMIC_COPY);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, xsum_ssbo);
 
-    glUseProgram(gradient_program->program);
-    glDrawArrays(GL_TRIANGLES, 0, 3);
-    GL_ERRORS();
+//    glUseProgram(calculate_gradient_program->program);
+ //   glDrawArrays(GL_TRIANGLES, 0, 3);
 
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, 0);
-
+    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
     GL_ERRORS();
 }
 

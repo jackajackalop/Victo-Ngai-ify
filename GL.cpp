@@ -14,6 +14,15 @@
 	#define DO(fn)
 #endif
 
+#ifdef __linux__
+	#define EXTEND(fn) \
+		fn = (decltype(fn))SDL_GL_GetProcAddress(#fn); \
+		if (!fn) { \
+			throw std::runtime_error("Error binding " #fn); \
+		}
+#endif
+
+
 void init_GL() {
 	DO(glDrawRangeElements)
 	DO(glTexImage3D)

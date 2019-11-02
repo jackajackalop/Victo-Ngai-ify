@@ -47,6 +47,5 @@ struct PlantMode : public Mode {
 
 	//scene:
 	Scene::Drawable *plant = nullptr;
-	Scene::Camera *camera = nullptr;
 
 };

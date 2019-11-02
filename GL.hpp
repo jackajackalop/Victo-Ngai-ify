@@ -7,7 +7,7 @@
  *
  * On Windows, OpenGL 1.0 & 1.1 are prototypes, the rest are pointers
  *  initialized by init_GL(). This is because the 1.1/1.0 entries are
- *  the only ones provided directly by OpenGL32.dll 
+ *  the only ones provided directly by OpenGL32.dll
  *
  * On Linux, all are prototypes.
  *
@@ -1276,4 +1276,21 @@ GLAPI void (APIENTRYFP glVertexAttribP3uiv) (GLuint index, GLenum type, GLboolea
 GLAPI void (APIENTRYFP glVertexAttribP4ui) (GLuint index, GLenum type, GLboolean normalized, GLuint value);
 GLAPI void (APIENTRYFP glVertexAttribP4uiv) (GLuint index, GLenum type, GLboolean normalized, const GLuint *value);
 
+//from GL_version_4.3
+#define GL_SHADER_STORAGE_BUFFER                           0x90D2
+#define GL_SHADER_STORAGE_BUFFER_BINDING                   0x90D3
+#define GL_SHADER_STORAGE_BUFFER_START                     0x90D4
+#define GL_SHADER_STORAGE_BUFFER_SIZE                      0x90D5
+#define GL_MAX_VERTEX_SHADER_STORAGE_BLOCKS                0x90D6
+#define GL_MAX_GEOMETRY_SHADER_STORAGE_BLOCKS              0x90D7
+#define GL_MAX_TESS_CONTROL_SHADER_STORAGE_BLOCKS          0x90D8
+#define GL_MAX_TESS_EVALUATION_SHADER_STORAGE_BLOCKS       0x90D9
+#define GL_MAX_FRAGMENT_SHADER_STORAGE_BLOCKS              0x90DA
+#define GL_MAX_COMPUTE_SHADER_STORAGE_BLOCKS               0x90DB
+#define GL_MAX_COMBINED_SHADER_STORAGE_BLOCKS              0x90DC
+#define GL_MAX_SHADER_STORAGE_BUFFER_BINDINGS              0x90DD
+#define GL_MAX_SHADER_STORAGE_BLOCK_SIZE                   0x90DE
+#define GL_SHADER_STORAGE_BUFFER_OFFSET_ALIGNMENT          0x90DF
+#define GL_SHADER_STORAGE_BARRIER_BIT                      0x2000
+#define GL_MAX_COMBINED_SHADER_OUTPUT_RESOURCES            0x8F39
 }
