@@ -49,7 +49,7 @@ static Load< MeshBuffer > meshes(LoadTagDefault, []() -> MeshBuffer const * {
 
 GLuint load_LUT(std::string const &filename);
 static Load< GLuint > lut_tex(LoadTagDefault, []() -> GLuint const *{
-        return new GLuint(load_LUT(data_path("lut.cube")));
+        return new GLuint(load_LUT(data_path("lut-fixed.cube")));
         });
 
 static Load< Scene > scene(LoadTagLate, []() -> Scene const * {

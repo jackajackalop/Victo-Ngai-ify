@@ -80,11 +80,11 @@ SceneProgram::SceneProgram() {
 		"	vec4 albedo = texture(TEX, texCoord) * color;\n"
 		//simple hemispherical lighting model:
 		"	vec3 light = mix(vec3(0.0,0.0,0.1), vec3(1.0,1.0,0.95), dot(n,l)*0.5+0.5);\n"
-        "   color_out = albedo; \n"
 		"	basic_out = vec4(light*albedo.rgb, albedo.a);\n"
+        "   color_out = albedo; \n"
         "   vec3 scale = vec3(lut_size - 1.0)/lut_size; \n"
         "   vec3 offset = vec3(1.0/(2.0*lut_size)); \n"
-        "   vec3 lut_color = texture(lut_tex, scale*albedo.rgb+offset).rgb; \n"
+        "   vec3 lut_color = texture(lut_tex, scale*color_out.rgb+offset).rgb; \n"
         "   color_out = vec4(lut_color, 1.0); \n"
 		"}\n"
 	);
