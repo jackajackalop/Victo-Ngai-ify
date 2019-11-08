@@ -14,23 +14,15 @@ Load< GradientProgram > gradient_program(LoadTagEarly, []() -> GradientProgram c
 
 CalculateGradientProgram::CalculateGradientProgram() {
 	//Compile vertex and fragment shaders using the convenient 'gl_compile_program' helper function:
-	program = gl_compile_program(
-		//vertex shader:
-		"#version 330\n"
+	program = gl_compile_program({ {GL_COMPUTE_SHADER,
+		"#version 430\n"
+        "layout(std430, binding=0) buffer interm {\n"
+        "   float xsum[]; \n"
+        "}; \n"
+        "layout( local_size_x = 128, local_size_y = 1, local_size_z = 1 ) in; \n"
 		"void main() {\n"
-		"	gl_Position = vec4(4*(gl_VertexID&1)-1, 2*(gl_VertexID&2)-1, 0.0, 1.0);\n"
 		"}\n"
-	,
-		//fragment shader:
-		"#version 330\n"
-       // "layout(std430, binding=0) buffer interm {\n"
-       // "   float xsum[]; \n"
-       // "}; \n"
-		"layout(location=0) out vec4 gradient_eq_out;\n"
-
-		"void main() {\n"
-        "   gradient_eq_out = vec4(1.0, 1.0, 1.0, 1.0); \n"
-		"}\n"
+        }}
 	);
 	glUseProgram(program); //bind program -- glUniform* calls refer to this program now
 

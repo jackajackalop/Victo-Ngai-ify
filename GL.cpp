@@ -16,14 +16,17 @@
 
 #ifdef __linux__
 	#define EXTEND(fn) \
-		fn = (decltype(fn))SDL_GL_GetProcAddress(#fn); \
-		if (!fn) { \
+		fn = (decltype(fn))SDL_GL_GetProcAddress(#fn);
+/*		if (!fn) { \
 			throw std::runtime_error("Error binding " #fn); \
-		}
+		}*/
 #endif
 
 
 void init_GL() {
+    EXTEND(glDispatchCompute)
+    EXTEND(glDispatchComputeIndirect)
+    EXTEND(glShaderStorageBlockBinding)
 	DO(glDrawRangeElements)
 	DO(glTexImage3D)
 	DO(glTexSubImage3D)
@@ -308,6 +311,14 @@ void init_GL() {
 	DO(glVertexAttribP4ui)
 	DO(glVertexAttribP4uiv)
 }
+#ifdef __linux__
+    void (APIENTRYFP* glDispatchCompute) (GLuint num_groups_x, GLuint
+        num_groups_y, GLuint num_groups_z);
+    void (APIENTRY* glDispatchComputeIndirect) (GLintptr indirect);
+    void (APIENTRYFP* glShaderStorageBlockBinding) (GLuint program,
+            GLuint storageBlockIndex, GLuint storageBlockBinding);
+#endif
+
 #ifdef _WIN32
 	 void (APIENTRYFP glDrawRangeElements) (GLenum mode, GLuint start, GLuint end, GLsizei count, GLenum type, const void *indices);
 	 void (APIENTRYFP glTexImage3D) (GLenum target, GLint level, GLint internalformat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLenum format, GLenum type, const void *pixels);
