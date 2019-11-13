@@ -27,6 +27,8 @@ void init_GL() {
     EXTEND(glDispatchCompute)
     EXTEND(glDispatchComputeIndirect)
     EXTEND(glShaderStorageBlockBinding)
+    EXTEND(glBindImageTexture)
+    EXTEND(glMemoryBarrier)
 	DO(glDrawRangeElements)
 	DO(glTexImage3D)
 	DO(glTexSubImage3D)
@@ -314,9 +316,13 @@ void init_GL() {
 #ifdef __linux__
     void (APIENTRYFP* glDispatchCompute) (GLuint num_groups_x, GLuint
         num_groups_y, GLuint num_groups_z);
-    void (APIENTRY* glDispatchComputeIndirect) (GLintptr indirect);
+    void (APIENTRYFP* glDispatchComputeIndirect) (GLintptr indirect);
     void (APIENTRYFP* glShaderStorageBlockBinding) (GLuint program,
             GLuint storageBlockIndex, GLuint storageBlockBinding);
+    void (APIENTRYFP* glBindImageTexture) (GLuint unit, GLuint texture,
+                GLint level, GLboolean layered, GLint layer, GLenum access,
+                          GLenum format);
+    void (APIENTRYFP* glMemoryBarrier) (GLbitfield barriers);
 #endif
 
 #ifdef _WIN32

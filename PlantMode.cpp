@@ -476,17 +476,91 @@ void PlantMode::draw_gradients_linfit(GLuint basic_tex, GLuint color_tex,
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     int chunk_num = scene->drawables.size();
-    float xsum[chunk_num];
-    GLuint xsum_ssbo;
-    glGenBuffers(1, &xsum_ssbo);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, xsum_ssbo);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, sizeof(xsum), xsum, GL_DYNAMIC_COPY);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, xsum_ssbo);
+    std::vector<float> xsum (chunk_num, 0.0f);
+    std::vector<float> ysum (chunk_num, 0.0f);
+    std::vector<float> xysum (chunk_num, 0.0f);
+    std::vector<float> x2sum (chunk_num, 0.0f);
+    std::vector<float> y2sum (chunk_num, 0.0f);
+    std::vector<int> n (chunk_num, 0);
 
-//    glUseProgram(calculate_gradient_program->program);
- //   glDrawArrays(GL_TRIANGLES, 0, 3);
 
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
+    //lots of help from this stackoverflow question
+    //https://stackoverflow.com/questions/32094598/opengl-compute-shader-ssbo
+    //calculate the linfit gradient equation things
+    {
+        GLuint xsum_ssbo;
+        GLuint ysum_ssbo;
+        GLuint xysum_ssbo;
+        GLuint x2sum_ssbo;
+        GLuint y2sum_ssbo;
+        GLuint n_ssbo;
+
+        glUseProgram(calculate_gradient_program->program);
+
+        glGenBuffers(1, &xsum_ssbo);
+        glGenBuffers(1, &ysum_ssbo);
+        glGenBuffers(1, &xysum_ssbo);
+        glGenBuffers(1, &x2sum_ssbo);
+        glGenBuffers(1, &y2sum_ssbo);
+        glGenBuffers(1, &n_ssbo);
+
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, xsum_ssbo);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_num*sizeof(float), &xsum, GL_DYNAMIC_COPY);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ysum_ssbo);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_num*sizeof(float), &ysum, GL_DYNAMIC_COPY);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, xysum_ssbo);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_num*sizeof(float), &xysum, GL_DYNAMIC_COPY);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, x2sum_ssbo);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_num*sizeof(float), &x2sum, GL_DYNAMIC_COPY);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, y2sum_ssbo);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_num*sizeof(float), &y2sum, GL_DYNAMIC_COPY);
+        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, n_ssbo);
+        glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_num*sizeof(int), &n, GL_DYNAMIC_COPY);
+
+        glDispatchCompute(chunk_num/2, 1, 1);
+
+        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+        auto load_result = [chunk_num](std::vector<float> *result, GLuint ssbo){
+            assert(result);
+
+            (*result).clear();
+            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
+            glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
+
+            float *ptr = (float *) glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
+            for(int i = 0; i<chunk_num; i++){
+                (*result).emplace_back(ptr[i]);
+            }
+        };
+
+        load_result(&xsum, xsum_ssbo);
+        load_result(&ysum, ysum_ssbo);
+        load_result(&xysum, xysum_ssbo);
+        load_result(&x2sum, x2sum_ssbo);
+        load_result(&y2sum, y2sum_ssbo);
+
+        n.clear();
+        glBindBuffer(GL_SHADER_STORAGE_BUFFER, n_ssbo);
+
+        int *ptr = (int *) glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
+        for(int i = 0; i<chunk_num; i++){
+            n.emplace_back(ptr[i]);
+        }
+    }
+
+    //draw the gradient using the calculated values
+    {
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, basic_tex);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, color_tex);
+
+        glUseProgram(gradient_program->program);
+        glDrawArrays(GL_TRIANGLES, 0, 3);
+    }
+
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
     GL_ERRORS();
 }
 
