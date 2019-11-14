@@ -483,7 +483,6 @@ void PlantMode::draw_gradients_linfit(GLuint basic_tex, GLuint color_tex,
     std::vector<float> y2sum (chunk_num, 0.0f);
     std::vector<int> n (chunk_num, 0);
 
-
     //lots of help from this stackoverflow question
     //https://stackoverflow.com/questions/32094598/opengl-compute-shader-ssbo
     //calculate the linfit gradient equation things
@@ -516,6 +515,12 @@ void PlantMode::draw_gradients_linfit(GLuint basic_tex, GLuint color_tex,
         glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_num*sizeof(float), &y2sum, GL_DYNAMIC_COPY);
         glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, n_ssbo);
         glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_num*sizeof(int), &n, GL_DYNAMIC_COPY);
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, color_tex);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, id_tex);
+
 
         glDispatchCompute(chunk_num/2, 1, 1);
 
