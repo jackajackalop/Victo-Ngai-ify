@@ -66,42 +66,42 @@ static Load< Scene > scene(LoadTagLate, []() -> Scene const * {
                 });
 
 
-	    //look up camera parent transform:
-    	for (auto t = ret->transforms.begin(); t != ret->transforms.end(); ++t) {
-	    	if (t->name == "CameraParent") {
-		    	if (camera_parent_transform) throw std::runtime_error("Multiple 'CameraParent' transforms in scene.");
-    			camera_parent_transform = &(*t);
-	    	}
-	    }
-	    if (!camera_parent_transform) throw std::runtime_error("No 'CameraParent' transform in scene.");
+        //look up camera parent transform:
+        for (auto t = ret->transforms.begin(); t != ret->transforms.end(); ++t) {
+        if (t->name == "CameraParent") {
+        if (camera_parent_transform) throw std::runtime_error("Multiple 'CameraParent' transforms in scene.");
+        camera_parent_transform = &(*t);
+        }
+        }
+        if (!camera_parent_transform) throw std::runtime_error("No 'CameraParent' transform in scene.");
         camera_shift = camera_parent_transform->position;
 
-	//look up the camera:
-    	for (auto c = ret->cameras.begin(); c != ret->cameras.end(); ++c) {
-	    	if (c->transform->name == "Camera") {
-    			if (camera) throw std::runtime_error("Multiple 'Camera' objects in scene.");
-			    camera = &(*c);
-		    }
-	    }
-    	if (!camera) throw std::runtime_error("No 'Camera' camera in scene.");
+        //look up the camera:
+        for (auto c = ret->cameras.begin(); c != ret->cameras.end(); ++c) {
+            if (c->transform->name == "Camera") {
+                if (camera) throw std::runtime_error("Multiple 'Camera' objects in scene.");
+                camera = &(*c);
+            }
+        }
+        if (!camera) throw std::runtime_error("No 'Camera' camera in scene.");
 
         return ret;
-        });
+});
 
 GLuint load_texture(int width, int height, std::vector<GLfloat> data) {
-	GLuint tex = 0;
-	glGenTextures(1, &tex);
-	glBindTexture(GL_TEXTURE_2D, tex);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, data.data());
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glGenerateMipmap(GL_TEXTURE_2D);
-	glBindTexture(GL_TEXTURE_2D, 0);
-	GL_ERRORS();
+    GLuint tex = 0;
+    glGenTextures(1, &tex);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_FLOAT, data.data());
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    GL_ERRORS();
 
-	return tex;
+    return tex;
 }
 
 //referenced this https://github.com/youandhubris/GPU-LUT-OpenFrameworks
@@ -111,8 +111,8 @@ GLuint load_LUT(std::string const &filename) {
 
     std::ifstream LUTfile(filename.c_str());
     if (!LUTfile) {
-		throw std::runtime_error("Failed to open LUT file '" + filename + "'.");
-	}
+        throw std::runtime_error("Failed to open LUT file '" + filename + "'.");
+    }
 
     while(!LUTfile.eof()){
         std::string LUTline;
@@ -162,16 +162,16 @@ bool PlantMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size
     }
 
     if (evt.type == SDL_MOUSEMOTION) {
-		if (evt.motion.state & SDL_BUTTON(SDL_BUTTON_LEFT)) {
-			camera_spin.x -= 3.0*evt.motion.xrel / float(window_size.x);
-			camera_spin.y -= 3.0*evt.motion.yrel / float(window_size.y);
-			return true;
-		} else if (evt.motion.state & SDL_BUTTON(SDL_BUTTON_RIGHT)) {
+        if (evt.motion.state & SDL_BUTTON(SDL_BUTTON_LEFT)) {
+            camera_spin.x -= 3.0*evt.motion.xrel / float(window_size.x);
+            camera_spin.y -= 3.0*evt.motion.yrel / float(window_size.y);
+            return true;
+        } else if (evt.motion.state & SDL_BUTTON(SDL_BUTTON_RIGHT)) {
             camera_shift.x -= 100.0*evt.motion.xrel / float(window_size.x);
-			camera_shift.z += 100.0*evt.motion.yrel / float(window_size.y);
-			return true;
-		}
-	}
+            camera_shift.z += 100.0*evt.motion.yrel / float(window_size.y);
+            return true;
+        }
+    }
 
     if(evt.type == SDL_MOUSEWHEEL) {
         if(evt.wheel.y > 0){
@@ -198,7 +198,7 @@ bool PlantMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size
 
 void PlantMode::update(float elapsed) {
     camera_parent_transform->rotation = glm::angleAxis(camera_spin.x, glm::vec3(0.0f, 0.0f, 1.0f))
-                    *glm::angleAxis(camera_spin.y, glm::vec3(1.0, 0.0, 0.0));
+        *glm::angleAxis(camera_spin.y, glm::vec3(1.0, 0.0, 0.0));
     camera_parent_transform->position = camera_shift;
 
 }
@@ -270,7 +270,7 @@ void PlantMode::draw_scene(GLuint *basic_tex_, GLuint *color_tex_,
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
             depth_tex, 0);
     GLenum bufs[3] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1,
-                    GL_COLOR_ATTACHMENT2};
+        GL_COLOR_ATTACHMENT2};
     glDrawBuffers(3, bufs);
     check_fb();
 
@@ -310,7 +310,7 @@ void PlantMode::draw_gradients_blur(GLuint basic_tex, GLuint color_tex,
     if(fb == 0) glGenFramebuffers(1, &fb);
     glBindFramebuffer(GL_FRAMEBUFFER, fb);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                            gradient_temp_tex, 0);
+            gradient_temp_tex, 0);
     GLenum bufs[1] = {GL_COLOR_ATTACHMENT0};
     glDrawBuffers(1, bufs);
     check_fb();
@@ -379,7 +379,7 @@ void PlantMode::draw_gradients_blur(GLuint basic_tex, GLuint color_tex,
 
 //thanks to http://sciencefair.math.iit.edu/analysis/linereg/hand/
 void PlantMode::cpu_gradient(GLuint basic_tex, GLuint color_tex,
-                            GLuint id_tex){
+        GLuint id_tex){
     int width = textures.size.x;
     int height = textures.size.y;
 
@@ -432,9 +432,9 @@ void PlantMode::cpu_gradient(GLuint basic_tex, GLuint color_tex,
 
             int id = ids[index*4]*255;
             float slope = ((n[id]*xysum[id]) - (xsum[id]*ysum[id]))/
-                      ((n[id]*x2sum[id]) - (xsum[id]*xsum[id]));
+                ((n[id]*x2sum[id]) - (xsum[id]*xsum[id]));
             float intercept = ((x2sum[id]*ysum[id]) - (xsum[id]*xysum[id]))/
-                      ((n[id]*x2sum[id]) - (xsum[id]*xsum[id]));
+                ((n[id]*x2sum[id]) - (xsum[id]*xsum[id]));
             float gradient_val = slope*y+intercept;
 
             gradient[index*4] = r*gradient_val;
@@ -447,7 +447,7 @@ void PlantMode::cpu_gradient(GLuint basic_tex, GLuint color_tex,
 }
 
 void PlantMode::draw_gradients_linfit(GLuint basic_tex, GLuint color_tex,
-                                GLuint id_tex, GLuint *gradient_tex_)
+        GLuint id_tex, GLuint *gradient_tex_)
 {
     assert(gradient_tex_);
     auto &gradient_tex = *gradient_tex_;
@@ -456,7 +456,7 @@ void PlantMode::draw_gradients_linfit(GLuint basic_tex, GLuint color_tex,
     if(fb == 0) glGenFramebuffers(1, &fb);
     glBindFramebuffer(GL_FRAMEBUFFER, fb);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-                            gradient_tex, 0);
+            gradient_tex, 0);
     GLenum bufs[1] = {GL_COLOR_ATTACHMENT0};
     glDrawBuffers(1, bufs);
     check_fb();
@@ -486,84 +486,59 @@ void PlantMode::draw_gradients_linfit(GLuint basic_tex, GLuint color_tex,
     //lots of help from this stackoverflow question
     //https://stackoverflow.com/questions/32094598/opengl-compute-shader-ssbo
     //calculate the linfit gradient equation things
-    {
-        GLuint xsum_ssbo;
-        GLuint ysum_ssbo;
-        GLuint xysum_ssbo;
-        GLuint x2sum_ssbo;
-        GLuint y2sum_ssbo;
-        GLuint n_ssbo;
+    GLuint xsum_ssbo;
+    GLuint ysum_ssbo;
+    GLuint xysum_ssbo;
+    GLuint x2sum_ssbo;
+    GLuint y2sum_ssbo;
+    GLuint n_ssbo;
 
-        glUseProgram(calculate_gradient_program->program);
+    glUseProgram(calculate_gradient_program->program);
 
-        glGenBuffers(1, &xsum_ssbo);
-        glGenBuffers(1, &ysum_ssbo);
-        glGenBuffers(1, &xysum_ssbo);
-        glGenBuffers(1, &x2sum_ssbo);
-        glGenBuffers(1, &y2sum_ssbo);
-        glGenBuffers(1, &n_ssbo);
+    glGenBuffers(1, &xsum_ssbo);
+    glGenBuffers(1, &ysum_ssbo);
+    glGenBuffers(1, &xysum_ssbo);
+    glGenBuffers(1, &x2sum_ssbo);
+    glGenBuffers(1, &y2sum_ssbo);
+    glGenBuffers(1, &n_ssbo);
 
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, xsum_ssbo);
-        glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_num*sizeof(float), &xsum, GL_DYNAMIC_COPY);
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ysum_ssbo);
-        glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_num*sizeof(float), &ysum, GL_DYNAMIC_COPY);
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, xysum_ssbo);
-        glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_num*sizeof(float), &xysum, GL_DYNAMIC_COPY);
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, x2sum_ssbo);
-        glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_num*sizeof(float), &x2sum, GL_DYNAMIC_COPY);
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, y2sum_ssbo);
-        glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_num*sizeof(float), &y2sum, GL_DYNAMIC_COPY);
-        glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, n_ssbo);
-        glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_num*sizeof(int), &n, GL_DYNAMIC_COPY);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, xsum_ssbo);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_num*sizeof(float), xsum.data(), GL_DYNAMIC_COPY);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ysum_ssbo);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_num*sizeof(float), ysum.data(), GL_DYNAMIC_COPY);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, xysum_ssbo);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_num*sizeof(float), xysum.data(), GL_DYNAMIC_COPY);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, x2sum_ssbo);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_num*sizeof(float), x2sum.data(), GL_DYNAMIC_COPY);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, y2sum_ssbo);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_num*sizeof(float), y2sum.data(), GL_DYNAMIC_COPY);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, n_ssbo);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_num*sizeof(int), n.data(), GL_DYNAMIC_COPY);
 
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, color_tex);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, id_tex);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, color_tex);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, id_tex);
 
+    glDispatchCompute(textures.size.x, textures.size.y, 1);
 
-        glDispatchCompute(chunk_num/2, 1, 1);
-
-        glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-        auto load_result = [chunk_num](std::vector<float> *result, GLuint ssbo){
-            assert(result);
-
-            (*result).clear();
-            glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
-            glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-
-            float *ptr = (float *) glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
-            for(int i = 0; i<chunk_num; i++){
-                (*result).emplace_back(ptr[i]);
-            }
-        };
-
-        load_result(&xsum, xsum_ssbo);
-        load_result(&ysum, ysum_ssbo);
-        load_result(&xysum, xysum_ssbo);
-        load_result(&x2sum, x2sum_ssbo);
-        load_result(&y2sum, y2sum_ssbo);
-
-        n.clear();
-        glBindBuffer(GL_SHADER_STORAGE_BUFFER, n_ssbo);
-
-        int *ptr = (int *) glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_WRITE_ONLY);
-        for(int i = 0; i<chunk_num; i++){
-            n.emplace_back(ptr[i]);
-        }
-    }
+    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
     //draw the gradient using the calculated values
-    {
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, xsum_ssbo);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ysum_ssbo);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, xysum_ssbo);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, x2sum_ssbo);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, y2sum_ssbo);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, n_ssbo);
 
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, basic_tex);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, color_tex);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, color_tex);
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, id_tex);
 
-        glUseProgram(gradient_program->program);
-        glDrawArrays(GL_TRIANGLES, 0, 3);
-    }
+    glUseProgram(gradient_program->program);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
 
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
     GL_ERRORS();
