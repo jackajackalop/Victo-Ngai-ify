@@ -476,43 +476,60 @@ void PlantMode::draw_gradients_linfit(GLuint basic_tex, GLuint color_tex,
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     int chunk_num = scene->drawables.size();
-    std::vector<float> xsum (chunk_num, 0.0f);
-    std::vector<float> ysum (chunk_num, 0.0f);
-    std::vector<float> xysum (chunk_num, 0.0f);
-    std::vector<float> x2sum (chunk_num, 0.0f);
-    std::vector<float> y2sum (chunk_num, 0.0f);
+    std::vector<float> wsum (chunk_num, 0.0f);
+    std::vector<float> hsum (chunk_num, 0.0f);
+    std::vector<float> w2sum (chunk_num, 0.0f);
+    std::vector<float> h2sum (chunk_num, 0.0f);
+    std::vector<float> whsum (chunk_num, 0.0f);
+    std::vector<float> wvsum (chunk_num, 0.0f);
+    std::vector<float> hvsum (chunk_num, 0.0f);
+    std::vector<float> vsum (chunk_num, 0.0f);
     std::vector<int> n (chunk_num, 0);
 
     //lots of help from this stackoverflow question
     //https://stackoverflow.com/questions/32094598/opengl-compute-shader-ssbo
     //calculate the linfit gradient equation things
-    GLuint xsum_ssbo;
-    GLuint ysum_ssbo;
-    GLuint xysum_ssbo;
-    GLuint x2sum_ssbo;
-    GLuint y2sum_ssbo;
+    GLuint wsum_ssbo;
+    GLuint hsum_ssbo;
+    GLuint w2sum_ssbo;
+    GLuint h2sum_ssbo;
+    GLuint whsum_ssbo;
+    GLuint wvsum_ssbo;
+    GLuint hvsum_ssbo;
+    GLuint vsum_ssbo;
     GLuint n_ssbo;
 
     glUseProgram(calculate_gradient_program->program);
+    glUniform1i(calculate_gradient_program->width, textures.size.x);
+    glUniform1i(calculate_gradient_program->height, textures.size.y);
 
-    glGenBuffers(1, &xsum_ssbo);
-    glGenBuffers(1, &ysum_ssbo);
-    glGenBuffers(1, &xysum_ssbo);
-    glGenBuffers(1, &x2sum_ssbo);
-    glGenBuffers(1, &y2sum_ssbo);
+    glGenBuffers(1, &wsum_ssbo);
+    glGenBuffers(1, &hsum_ssbo);
+    glGenBuffers(1, &w2sum_ssbo);
+    glGenBuffers(1, &h2sum_ssbo);
+    glGenBuffers(1, &whsum_ssbo);
+    glGenBuffers(1, &wvsum_ssbo);
+    glGenBuffers(1, &hvsum_ssbo);
+    glGenBuffers(1, &vsum_ssbo);
     glGenBuffers(1, &n_ssbo);
 
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, xsum_ssbo);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_num*sizeof(float), xsum.data(), GL_DYNAMIC_COPY);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ysum_ssbo);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_num*sizeof(float), ysum.data(), GL_DYNAMIC_COPY);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, xysum_ssbo);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_num*sizeof(float), xysum.data(), GL_DYNAMIC_COPY);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, x2sum_ssbo);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_num*sizeof(float), x2sum.data(), GL_DYNAMIC_COPY);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, y2sum_ssbo);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_num*sizeof(float), y2sum.data(), GL_DYNAMIC_COPY);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, n_ssbo);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, wsum_ssbo);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_num*sizeof(float), wsum.data(), GL_DYNAMIC_COPY);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, hsum_ssbo);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_num*sizeof(float), hsum.data(), GL_DYNAMIC_COPY);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, w2sum_ssbo);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_num*sizeof(float), w2sum.data(), GL_DYNAMIC_COPY);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, h2sum_ssbo);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_num*sizeof(float), h2sum.data(), GL_DYNAMIC_COPY);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, whsum_ssbo);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_num*sizeof(float), whsum.data(), GL_DYNAMIC_COPY);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, wvsum_ssbo);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_num*sizeof(float), wvsum.data(), GL_DYNAMIC_COPY);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, hvsum_ssbo);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_num*sizeof(float), hvsum.data(), GL_DYNAMIC_COPY);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, vsum_ssbo);
+   glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_num*sizeof(float), vsum.data(), GL_DYNAMIC_COPY);
+ glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 8, n_ssbo);
     glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_num*sizeof(int), n.data(), GL_DYNAMIC_COPY);
 
     glActiveTexture(GL_TEXTURE0);
@@ -525,12 +542,15 @@ void PlantMode::draw_gradients_linfit(GLuint basic_tex, GLuint color_tex,
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
     //draw the gradient using the calculated values
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, xsum_ssbo);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, ysum_ssbo);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, xysum_ssbo);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, x2sum_ssbo);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, y2sum_ssbo);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, n_ssbo);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, wsum_ssbo);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, hsum_ssbo);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, w2sum_ssbo);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, h2sum_ssbo);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, whsum_ssbo);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, wvsum_ssbo);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, hvsum_ssbo);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, vsum_ssbo);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 8, n_ssbo);
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, color_tex);
@@ -538,6 +558,8 @@ void PlantMode::draw_gradients_linfit(GLuint basic_tex, GLuint color_tex,
     glBindTexture(GL_TEXTURE_2D, id_tex);
 
     glUseProgram(gradient_program->program);
+    glUniform1i(gradient_program->width, textures.size.x);
+    glUniform1i(gradient_program->height, textures.size.y);
     glDrawArrays(GL_TRIANGLES, 0, 3);
 
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
