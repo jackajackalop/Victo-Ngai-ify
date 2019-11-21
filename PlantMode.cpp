@@ -481,9 +481,9 @@ void PlantMode::draw_gradients_linfit(GLuint basic_tex, GLuint color_tex,
     std::vector<float> w2sum (chunk_num, 0.0f);
     std::vector<float> h2sum (chunk_num, 0.0f);
     std::vector<float> whsum (chunk_num, 0.0f);
-    std::vector<float> wvsum (chunk_num, 0.0f);
-    std::vector<float> hvsum (chunk_num, 0.0f);
-    std::vector<float> vsum (chunk_num, 0.0f);
+    std::vector<float> wvsum (chunk_num*3, 0.0f);
+    std::vector<float> hvsum (chunk_num*3, 0.0f);
+    std::vector<float> vsum (chunk_num*3, 0.0f);
     std::vector<int> n (chunk_num, 0);
 
     //lots of help from this stackoverflow question
@@ -524,11 +524,11 @@ void PlantMode::draw_gradients_linfit(GLuint basic_tex, GLuint color_tex,
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, whsum_ssbo);
     glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_num*sizeof(float), whsum.data(), GL_DYNAMIC_COPY);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, wvsum_ssbo);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_num*sizeof(float), wvsum.data(), GL_DYNAMIC_COPY);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, 3*chunk_num*sizeof(float), wvsum.data(), GL_DYNAMIC_COPY);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, hvsum_ssbo);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_num*sizeof(float), hvsum.data(), GL_DYNAMIC_COPY);
+    glBufferData(GL_SHADER_STORAGE_BUFFER, 3*chunk_num*sizeof(float), hvsum.data(), GL_DYNAMIC_COPY);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, vsum_ssbo);
-   glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_num*sizeof(float), vsum.data(), GL_DYNAMIC_COPY);
+   glBufferData(GL_SHADER_STORAGE_BUFFER, 3*chunk_num*sizeof(float), vsum.data(), GL_DYNAMIC_COPY);
  glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 8, n_ssbo);
     glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_num*sizeof(int), n.data(), GL_DYNAMIC_COPY);
 
