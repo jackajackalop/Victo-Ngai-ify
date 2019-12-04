@@ -212,7 +212,6 @@ struct Textures {
     GLuint id_tex = 0;
     GLuint depth_tex = 0;
     GLuint gradient_tex = 0;
-    GLuint gradient_temp_tex = 0;
     GLuint final_tex = 0;
     void allocate(glm::uvec2 const &new_size) {
         //allocate full-screen framebuffer:
@@ -237,7 +236,6 @@ struct Textures {
             alloc_tex(&id_tex, GL_RGBA8, GL_RGBA);
             alloc_tex(&depth_tex, GL_DEPTH_COMPONENT24, GL_DEPTH_COMPONENT);
             alloc_tex(&gradient_tex, GL_RGBA8, GL_RGBA);
-            alloc_tex(&gradient_temp_tex, GL_RGBA8, GL_RGBA);
             alloc_tex(&final_tex, GL_RGBA8, GL_RGBA);
             GL_ERRORS();
         }
@@ -297,20 +295,19 @@ void PlantMode::draw_scene(GLuint *basic_tex_, GLuint *color_tex_,
     GL_ERRORS();
 }
 
-void PlantMode::draw_gradients_blur(GLuint basic_tex, GLuint color_tex,
-        GLuint id_tex,
-        GLuint *gradient_temp_tex_, GLuint *gradient_tex_)
+void PlantMode::draw_gradients_cpu(GLuint basic_tex, GLuint color_tex,
+        GLuint id_tex, GLuint *gradient_tex_)
 {
-    assert(gradient_temp_tex_);
     assert(gradient_tex_);
-    auto &gradient_temp_tex = *gradient_temp_tex_;
     auto &gradient_tex = *gradient_tex_;
+
+    cpu_gradient(basic_tex, color_tex, id_tex);
 
     static GLuint fb = 0;
     if(fb == 0) glGenFramebuffers(1, &fb);
     glBindFramebuffer(GL_FRAMEBUFFER, fb);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-            gradient_temp_tex, 0);
+                            gradient_tex, 0);
     GLenum bufs[1] = {GL_COLOR_ATTACHMENT0};
     glDrawBuffers(1, bufs);
     check_fb();
@@ -330,51 +327,99 @@ void PlantMode::draw_gradients_blur(GLuint basic_tex, GLuint color_tex,
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, basic_tex);
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, color_tex);
-    glActiveTexture(GL_TEXTURE2);
-    glBindTexture(GL_TEXTURE_2D, basic_tex);
-    glActiveTexture(GL_TEXTURE3);
-    glBindTexture(GL_TEXTURE_2D, id_tex);
+    glBindTexture(GL_TEXTURE_2D, gradient_png_tex);
 
-    glUseProgram(bilateralish_gradientH_program->program);
+    glUseProgram(cpu_gradient_program->program);
     glDrawArrays(GL_TRIANGLES, 0, 3);
     GL_ERRORS();
 
-    static GLuint fb2 = 0;
-    if(fb2==0) glGenFramebuffers(1, &fb2);
-    glBindFramebuffer(GL_FRAMEBUFFER, fb2);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
-            gradient_tex, 0);
-    bufs[1] = {GL_COLOR_ATTACHMENT0};
-    glDrawBuffers(1, bufs);
-    check_fb();
-
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, basic_tex);
-    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    GL_ERRORS();
+}
+void PlantMode::cpu_gradient(GLuint basic_tex, GLuint color_tex,
+                            GLuint id_tex){
+    int width = textures.size.x;
+    int height = textures.size.y;
+
+    std::vector<GLfloat> pixels(width*height*4, 0.0f);
     glBindTexture(GL_TEXTURE_2D, color_tex);
-    glActiveTexture(GL_TEXTURE2);
-    glBindTexture(GL_TEXTURE_2D, gradient_temp_tex);
-    glActiveTexture(GL_TEXTURE3);
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, pixels.data());
+
+    std::vector<GLfloat> ids(width*height*4, 0.0f);
     glBindTexture(GL_TEXTURE_2D, id_tex);
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, ids.data());
 
-    glUseProgram(bilateralish_gradientV_program->program);
-    glDrawArrays(GL_TRIANGLES, 0, 3);
-    GL_ERRORS();
+    std::vector<GLfloat> gradient(width*height*4, 0.0f);
 
+    //first calculate linear fit gradient equations
+    //y is value, x is the height in the screen
+    //the following values are calculated for each object in the scene and
+    //is stored at the index of the id assigned to the object
+    int num_objects = scene->drawables.size();
+    std::vector<float> wsum (num_objects, 0.0f);
+    std::vector<float> hsum (num_objects, 0.0f);
+    std::vector<float> w2sum (num_objects, 0.0f);
+    std::vector<float> h2sum (num_objects, 0.0f);
+    std::vector<float> whsum (num_objects, 0.0f);
+    std::vector<float> wvsum (num_objects, 0.0f);
+    std::vector<float> hvsum (num_objects, 0.0f);
+    std::vector<float> vsum (num_objects, 0.0f);
+    std::vector<int> n (num_objects, 0);
 
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    glActiveTexture(GL_TEXTURE2);
-    glBindTexture(GL_TEXTURE_2D, 0);
-    glActiveTexture(GL_TEXTURE3);
-    glBindTexture(GL_TEXTURE_2D, 0);
+    for(int y = 0; y<height; y++) {
+        for(int x = 0; x<width; x++){
+            int index = x+y*width;
+            float r = pixels[index*4];
+            float g = pixels[index*4+1];
+            float b = pixels[index*4+2];
+            float value = glm::max(glm::max(r, g), b);
+            int id = ids[index*4]*255;
 
-    GL_ERRORS();
+            wsum[id] += x;
+            hsum[id] += y;
+            w2sum[id] += x*x;
+            h2sum[id] += y*y;
+            whsum[id] += x*y;
+            wvsum[id] += x*value;
+            hvsum[id] += y*value;
+            vsum[id] += value;
+            n[id]++;
+        }
+    }
+
+    for(int y = 0; y<height; y++){
+        for(int x = 0; x<width; x++){
+            int index = x+y*width;
+            float r = pixels[index*4];
+            float g = pixels[index*4+1];
+            float b = pixels[index*4+2];
+
+            int id = ids[index*4]*255;
+
+            float w = wsum[id];
+            float h = hsum[id];
+            float w2 = w2sum[id];
+            float h2 = h2sum[id];
+            float wh = whsum[id];
+            float wv = wvsum[id];
+            float hv = hvsum[id];
+            float v = vsum[id];
+
+            glm::vec3 RHS = glm::vec3(wv, hv, v);
+            glm::mat3 A = glm::mat3(w2, wh, w,
+                                   wh, h2, h,
+                                   w, h, n[id]);
+            glm::vec3 soln = glm::inverse(A)*RHS;
+            float gradient_val = soln.x*x+soln.y*y+soln.z;
+            gradient[index*4] = r*gradient_val;
+            gradient[index*4+1] = g*gradient_val;
+            gradient[index*4+2] = b*gradient_val;
+            gradient[index*4+3] = 1.0f;
+        }
+    }
+    gradient_png_tex = load_texture(width, height, gradient);
 }
 
 void PlantMode::draw_gradients_linfit(GLuint basic_tex, GLuint color_tex,
@@ -522,9 +567,8 @@ void PlantMode::draw(glm::uvec2 const &drawable_size) {
     draw_scene(&textures.basic_tex, &textures.color_tex, &textures.id_tex,
             &textures.depth_tex);
     if(show == GRADIENTS_BLUR){
-        draw_gradients_blur(textures.basic_tex, textures.color_tex,
-                textures.id_tex,
-                &textures.gradient_temp_tex, &textures.gradient_tex);
+        draw_gradients_cpu(textures.basic_tex, textures.color_tex,
+                textures.id_tex, &textures.gradient_tex);
     }else{
         draw_gradients_linfit(textures.basic_tex, textures.color_tex,
                 textures.id_tex, &textures.gradient_tex);
