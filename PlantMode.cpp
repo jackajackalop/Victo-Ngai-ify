@@ -15,6 +15,7 @@
 
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/string_cast.hpp>
 
 #include <iostream>
 #include <fstream>
@@ -338,6 +339,15 @@ void PlantMode::draw_gradients_cpu(GLuint basic_tex, GLuint color_tex,
 
     GL_ERRORS();
 }
+
+float pack_float (float v){
+    return float(v*4096.0f);
+}
+
+float unpack_float(float v){
+    return float(v)/4096.0f;
+}
+
 void PlantMode::cpu_gradient(GLuint basic_tex, GLuint color_tex,
                             GLuint id_tex){
     int width = textures.size.x;
@@ -358,15 +368,15 @@ void PlantMode::cpu_gradient(GLuint basic_tex, GLuint color_tex,
     //the following values are calculated for each object in the scene and
     //is stored at the index of the id assigned to the object
     int num_objects = scene->drawables.size();
-    std::vector<float> wsum (num_objects, 0.0f);
-    std::vector<float> hsum (num_objects, 0.0f);
-    std::vector<float> w2sum (num_objects, 0.0f);
-    std::vector<float> h2sum (num_objects, 0.0f);
-    std::vector<float> whsum (num_objects, 0.0f);
-    std::vector<float> wvsum (num_objects, 0.0f);
-    std::vector<float> hvsum (num_objects, 0.0f);
-    std::vector<float> vsum (num_objects, 0.0f);
-    std::vector<int> n (num_objects, 0);
+    std::vector<double> wsum (num_objects, 0);
+    std::vector<double> hsum (num_objects, 0);
+    std::vector<double> w2sum (num_objects, 0);
+    std::vector<double> h2sum (num_objects, 0);
+    std::vector<double> whsum (num_objects, 0);
+    std::vector<double> wvsum (num_objects, 0);
+    std::vector<double> hvsum (num_objects, 0);
+    std::vector<double> vsum (num_objects, 0);
+    std::vector<double> n (num_objects, 0);
 
     for(int y = 0; y<height; y++) {
         for(int x = 0; x<width; x++){
@@ -376,15 +386,16 @@ void PlantMode::cpu_gradient(GLuint basic_tex, GLuint color_tex,
             float b = pixels[index*4+2];
             float value = glm::max(glm::max(r, g), b);
             int id = ids[index*4]*255;
+            assert(id<int(wsum.size()));
 
-            wsum[id] += x;
-            hsum[id] += y;
-            w2sum[id] += x*x;
-            h2sum[id] += y*y;
-            whsum[id] += x*y;
-            wvsum[id] += x*value;
-            hvsum[id] += y*value;
-            vsum[id] += value;
+            wsum[id] += (x);
+            hsum[id] +=  (y);
+            w2sum[id] += (x*x);
+            h2sum[id] += (y*y);
+            whsum[id] += (x*y);
+            wvsum[id] += (x*value);
+            hvsum[id] += (y*value);
+            vsum[id] +=  (value);
             n[id]++;
         }
     }
@@ -395,27 +406,49 @@ void PlantMode::cpu_gradient(GLuint basic_tex, GLuint color_tex,
             float r = pixels[index*4];
             float g = pixels[index*4+1];
             float b = pixels[index*4+2];
+            float value = glm::max(glm::max(r, g), b);
 
             int id = ids[index*4]*255;
-
-            float w = wsum[id];
-            float h = hsum[id];
-            float w2 = w2sum[id];
-            float h2 = h2sum[id];
-            float wh = whsum[id];
-            float wv = wvsum[id];
-            float hv = hvsum[id];
-            float v = vsum[id];
+            double w = (wsum[id]);
+            double h = (hsum[id]);
+            double w2 =(w2sum[id]);
+            double h2 =(h2sum[id]);
+            double wh =(whsum[id]);
+            double wv =(wvsum[id]);
+            double hv =(hvsum[id]);
+            double v = (vsum[id]);
 
             glm::vec3 RHS = glm::vec3(wv, hv, v);
-            glm::mat3 A = glm::mat3(w2, wh, w,
-                                   wh, h2, h,
-                                   w, h, n[id]);
+            glm::mat3 A = glm::mat3(glm::vec3(w2, wh, w),
+                                   glm::vec3(wh, h2, h),
+                                   glm::vec3(w, h, n[id]));
             glm::vec3 soln = glm::inverse(A)*RHS;
+           /* glm::vec2 RHS2 = glm::vec2(wv, v);
+            glm::mat2 A2 = glm::mat2(w2, w, w, n[id]);
+            glm::vec2 soln2 = glm::inverse(A2)*RHS2;*/
             float gradient_val = soln.x*x+soln.y*y+soln.z;
-            gradient[index*4] = r*gradient_val;
-            gradient[index*4+1] = g*gradient_val;
-            gradient[index*4+2] = b*gradient_val;
+            //gradient_val = abs(glm::determinant(A));
+            if(x==200 && y==200){
+//                std::cout<<glm::to_string(A[0])<<"\n"<<glm::to_string(A[1])<<"\n"<<glm::to_string(A[2])<<" "<<gradient_val<<std::endl;
+                std::cout<<gradient_val<<std::endl;
+                std::cout<<glm::to_string((A*soln-RHS)/RHS)<<"\n"<<std::endl;
+            }
+//            gradient_val = soln2.x*x+soln2.y;
+            float output = gradient_val-value;
+            if(output<0){
+                gradient[index*4] = 0.5-output;
+            }else{
+                gradient[index*4] = 0.5;
+            }
+            gradient[index*4+1] = 0.5;
+            if(output>0){
+                gradient[index*4+2] = 0.5+output;
+            }else{
+                gradient[index*4+2] = 0.5;
+            }
+            gradient[index*4] = gradient_val;
+            gradient[index*4+1] = gradient_val;
+            gradient[index*4+2] = gradient_val;
             gradient[index*4+3] = 1.0f;
         }
     }

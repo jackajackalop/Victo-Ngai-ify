@@ -38,6 +38,8 @@ CalculateGradientProgram::CalculateGradientProgram() {
 		"void main() {\n"
         "   ivec2 coord = ivec2(gl_GlobalInvocationID.xy); \n"
         "   vec4 color = texelFetch(color_tex, coord, 0); \n"
+        "   float value = max(color.r, max(color.g, color.b));"
+        "   color = vec4(value, value, value, value);"
         "   int id = int(texelFetch(id_tex, coord, 0).r*255.0); \n"
         "   float w = float(gl_GlobalInvocationID.x)/width; \n"
         "   float h = float(gl_GlobalInvocationID.y)/height; \n"
@@ -118,7 +120,8 @@ GradientProgram::GradientProgram() {
         "   mat3 A = mat3(w2sum, whsum, wsum,"
         "                 whsum, h2sum, hsum,"
         "                 wsum, hsum, n); \n"
-        "   return inverse(A)*RHS; \n"
+  //      "   return inverse(A)*RHS; \n"
+        "   return vec3(determinant(A), determinant(A), determinant(A)); \n"
         "} \n"
 
 		"void main() {\n"
@@ -134,6 +137,7 @@ GradientProgram::GradientProgram() {
         "   float gradient_valG = eqG.x*normalizedX+eqG.y*normalizedY+eqG.z; \n"
         "   float gradient_valB = eqB.x*normalizedX+eqB.y*normalizedY+eqB.z; \n"
         "   gradient_out = vec4(gradient_valR, gradient_valG, gradient_valB, 1.0); \n"
+        "   gradient_out = vec4(eqR, 1.0);"
 		"}\n"
 	);
 	glUseProgram(program); //bind program -- glUniform* calls refer to this program now
