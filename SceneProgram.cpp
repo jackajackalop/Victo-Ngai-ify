@@ -15,22 +15,6 @@ Load< SceneProgram > scene_program(LoadTagEarly, []() -> SceneProgram const * {
 	scene_program_pipeline.OBJECT_TO_LIGHT_mat4x3 = ret->OBJECT_TO_LIGHT_mat4x3;
 	scene_program_pipeline.NORMAL_TO_LIGHT_mat3 = ret->NORMAL_TO_LIGHT_mat3;
 
-	//make a 1-pixel white texture to bind by default:
-	GLuint tex;
-	glGenTextures(1, &tex);
-
-	glBindTexture(GL_TEXTURE_2D, tex);
-	std::vector< glm::u8vec4 > tex_data(1, glm::u8vec4(0xff));
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, tex_data.data());
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glBindTexture(GL_TEXTURE_2D, 0);
-
-	scene_program_pipeline.textures[0].texture = tex;
-	scene_program_pipeline.textures[0].target = GL_TEXTURE_2D;
-
 	return ret;
 });
 
@@ -42,6 +26,7 @@ SceneProgram::SceneProgram() {
 		"uniform mat4 OBJECT_TO_CLIP;\n"
 		"uniform mat4x3 OBJECT_TO_LIGHT;\n"
 		"uniform mat3 NORMAL_TO_LIGHT;\n"
+        "uniform mat4 LIGHT_TO_SPOT;\n"
 		"in vec4 Position;\n"
 		"in vec3 Normal;\n"
 		"in vec4 Color;\n"
@@ -50,24 +35,28 @@ SceneProgram::SceneProgram() {
 		"out vec3 normal;\n"
 		"out vec4 color;\n"
 		"out vec2 texCoord;\n"
+		"out vec4 shadowCoord;\n"
 		"void main() {\n"
 		"	gl_Position = OBJECT_TO_CLIP * Position;\n"
 		"	position = OBJECT_TO_LIGHT * Position;\n"
 		"	normal = NORMAL_TO_LIGHT * Normal;\n"
 		"	color = Color;\n"
 		"	texCoord = TexCoord;\n"
+        "   shadowCoord = LIGHT_TO_SPOT * vec4(position, 1.0); \n"
 		"}\n"
 	,
 		//fragment shader:
 		"#version 330\n"
-		"uniform sampler2D TEX;\n"
+        "uniform sampler2DShadow shadow_depth_tex; \n"
         "uniform sampler3D lut_tex; \n"
         "uniform int lut_size; \n"
+        "uniform vec3 sun_direction; \n"
         "uniform int id; \n"
 		"in vec3 position;\n"
 		"in vec3 normal;\n"
 		"in vec4 color;\n"
 		"in vec2 texCoord;\n"
+        "in vec4 shadowCoord; \n"
 		"layout(location=0) out vec4 basic_out;\n"
 		"layout(location=1) out vec4 color_out;\n"
         "layout(location=2) out vec4 id_out; \n"
@@ -76,10 +65,19 @@ SceneProgram::SceneProgram() {
         "   float id_color = float(id)/255.0; \n"
         "   id_out = vec4(id_color, id_color, id_color, 1.0); \n"
 		"	vec3 n = normalize(normal);\n"
-		"	vec3 l = normalize(vec3(0.1, 0.1, 1.0));\n"
-		"	vec4 albedo = texture(TEX, texCoord) * color;\n"
+		//"	vec3 l = normalize(vec3(0.1, 0.1, 1.0));\n"
+        "   vec3 l = sun_direction; \n"
+		"	vec4 albedo = color;\n"
+
 		//simple hemispherical lighting model:
-		"	vec3 light = mix(vec3(0.0,0.0,0.1), vec3(1.0,1.0,0.95), dot(n,l)*0.5+0.5);\n"
+		"	float nl = max(0.0, dot(n,l));\n"
+		"	vec3 light = mix(vec3(0.0,0.0,0.1), vec3(1.0,1.0,0.95), nl*0.5+0.5);\n"
+        "   light *= vec3(0.2, 0.2, 0.2); \n"
+
+        //shadow calculations
+		"	float shadow = textureProj(shadow_depth_tex, shadowCoord);\n"
+		"	light += nl*shadow;\n"
+
 		"	basic_out = vec4(light*albedo.rgb, albedo.a);\n"
         "   color_out = albedo; \n"
         "   vec3 scale = vec3(lut_size - 1.0)/lut_size; \n"
@@ -101,14 +99,15 @@ SceneProgram::SceneProgram() {
 	OBJECT_TO_CLIP_mat4 = glGetUniformLocation(program, "OBJECT_TO_CLIP");
 	OBJECT_TO_LIGHT_mat4x3 = glGetUniformLocation(program, "OBJECT_TO_LIGHT");
 	NORMAL_TO_LIGHT_mat3 = glGetUniformLocation(program, "NORMAL_TO_LIGHT");
+	LIGHT_TO_SPOT = glGetUniformLocation(program, "LIGHT_TO_SPOT");
+	sun_direction = glGetUniformLocation(program, "sun_direction");
     lut_size = glGetUniformLocation(program, "lut_size");
     id = glGetUniformLocation(program, "id");
-	GLuint TEX_sampler2D = glGetUniformLocation(program, "TEX");
 
 	//set TEX to always refer to texture binding zero:
 	glUseProgram(program); //bind program -- glUniform* calls refer to this program now
 
-	glUniform1i(TEX_sampler2D, 0); //set TEX to sample from GL_TEXTURE0
+	glUniform1i(glGetUniformLocation(program, "shadow_depth_tex"), 0);
 	glUniform1i(glGetUniformLocation(program, "lut_tex"), 1);
 
 	glUseProgram(0); //unbind program -- glUniform* calls refer to ??? now

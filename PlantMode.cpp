@@ -29,7 +29,8 @@ enum Stages {
     BASIC = 0,
     FLATS = 1,
     GRADIENTS_BLUR = 2,
-    GRADIENTS_LINFIT = 3
+    GRADIENTS_LINFIT = 3,
+    SHADOWS = 4
 };
 
 int show = 1;
@@ -69,10 +70,10 @@ static Load< Scene > scene(LoadTagLate, []() -> Scene const * {
 
         //look up camera parent transform:
         for (auto t = ret->transforms.begin(); t != ret->transforms.end(); ++t) {
-        if (t->name == "CameraParent") {
-        if (camera_parent_transform) throw std::runtime_error("Multiple 'CameraParent' transforms in scene.");
-        camera_parent_transform = &(*t);
-        }
+            if (t->name == "CameraParent") {
+                if (camera_parent_transform) throw std::runtime_error("Multiple 'CameraParent' transforms in scene.");
+                camera_parent_transform = &(*t);
+            }
         }
         if (!camera_parent_transform) throw std::runtime_error("No 'CameraParent' transform in scene.");
         camera_shift = camera_parent_transform->position;
@@ -213,6 +214,9 @@ struct Textures {
     GLuint id_tex = 0;
     GLuint depth_tex = 0;
     GLuint gradient_tex = 0;
+
+	GLuint shadow_depth_tex = 0;
+
     GLuint final_tex = 0;
     void allocate(glm::uvec2 const &new_size) {
         //allocate full-screen framebuffer:
@@ -237,6 +241,8 @@ struct Textures {
             alloc_tex(&id_tex, GL_RGBA8, GL_RGBA);
             alloc_tex(&depth_tex, GL_DEPTH_COMPONENT24, GL_DEPTH_COMPONENT);
             alloc_tex(&gradient_tex, GL_RGBA8, GL_RGBA);
+            alloc_tex(&shadow_depth_tex, GL_DEPTH_COMPONENT24,
+                    GL_DEPTH_COMPONENT);
             alloc_tex(&final_tex, GL_RGBA8, GL_RGBA);
             GL_ERRORS();
         }
@@ -244,9 +250,40 @@ struct Textures {
     }
 } textures;
 
+void PlantMode::draw_shadows(GLuint *shadow_depth_tex_)
+{
+    assert(shadow_depth_tex_);
+    auto &shadow_depth_tex = *shadow_depth_tex_;
 
-void PlantMode::draw_scene(GLuint *basic_tex_, GLuint *color_tex_,
-        GLuint *id_tex_, GLuint *depth_tex_)
+    static GLuint fb = 0;
+    if(fb==0) glGenFramebuffers(1, &fb);
+    glBindFramebuffer(GL_FRAMEBUFFER, fb);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
+            shadow_depth_tex, 0);
+    check_fb();
+
+    //Draw scene:
+    camera->aspect = textures.size.x / float(textures.size.y);
+
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    //set up basic OpenGL state:
+    glEnable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
+    glBlendEquation(GL_FUNC_ADD);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_FRONT);
+
+    scene->draw(*camera, true);
+    glBindVertexArray(empty_vao);
+    GL_ERRORS();
+
+}
+
+void PlantMode::draw_scene(GLuint shadow_depth_tex, GLuint *basic_tex_,
+        GLuint *color_tex_, GLuint *id_tex_, GLuint *depth_tex_)
 {
     assert(basic_tex_);
     assert(color_tex_);
@@ -287,10 +324,30 @@ void PlantMode::draw_scene(GLuint *basic_tex_, GLuint *color_tex_,
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
 
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, shadow_depth_tex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LESS);
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_3D, *lut_tex);
     glUseProgram(scene_program->program);
+    glm::vec3 sun_dir = light_rotation*glm::vec3(0.0, 0.0, -1.0);
+    glUniform3fv(scene_program->sun_direction, 1, glm::value_ptr(sun_dir));
     glUniform1i(scene_program->lut_size, lut_size);
+
+
+	glm::mat4 world_to_spot =
+		//This matrix converts from the spotlight's clip space ([-1,1]^3) into depth map texture coordinates ([0,1]^2) and depth map Z values ([0,1]):
+		glm::mat4(
+			0.5f, 0.0f, 0.0f, 0.0f,
+			0.0f, 0.5f, 0.0f, 0.0f,
+			0.0f, 0.0f, 0.5f, 0.0f,
+			0.5f, 0.5f, 0.5f+0.00001f /* <-- bias */, 1.0f
+		)
+		//this is the world-to-clip matrix used when rendering the shadow map:
+		* light_mat * make_light_to_local();
+    glUniformMatrix4fv(scene_program->LIGHT_TO_SPOT, 1, GL_FALSE,
+            glm::value_ptr(world_to_spot));
     scene->draw(*camera);
     glBindVertexArray(empty_vao);
     GL_ERRORS();
@@ -597,12 +654,14 @@ void PlantMode::draw_vignette(){
 void PlantMode::draw(glm::uvec2 const &drawable_size) {
     textures.allocate(drawable_size);
 
-    draw_scene(&textures.basic_tex, &textures.color_tex, &textures.id_tex,
+    draw_shadows(&textures.shadow_depth_tex);
+    draw_scene(textures.shadow_depth_tex,
+            &textures.basic_tex, &textures.color_tex, &textures.id_tex,
             &textures.depth_tex);
     if(show == GRADIENTS_BLUR){
         draw_gradients_cpu(textures.basic_tex, textures.color_tex,
                 textures.id_tex, &textures.gradient_tex);
-    }else{
+    }else if(show == GRADIENTS_LINFIT){
         draw_gradients_linfit(textures.basic_tex, textures.color_tex,
                 textures.id_tex, &textures.gradient_tex);
     }

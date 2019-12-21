@@ -8,7 +8,7 @@
  *  - Camera information (via "Camera")
  *  - Light information (via "Light")
  *
- * This associated information 
+ * This associated information
  *
  */
 
@@ -71,6 +71,7 @@ struct Scene {
 			GLuint OBJECT_TO_CLIP_mat4 = -1U; //uniform location for object to clip space matrix
 			GLuint OBJECT_TO_LIGHT_mat4x3 = -1U; //uniform location for object to light space (== world space) matrix
 			GLuint NORMAL_TO_LIGHT_mat3 = -1U; //uniform location for normal to light space (== world space) matrix
+			GLuint LIGHT_TO_SPOT_mat4 = -1U; //uniform location for world to light space (== world space) matrix
 
 			std::function< void() > set_uniforms; //(optional) function to set any other useful uniforms
 
@@ -115,6 +116,13 @@ struct Scene {
 
 		//Spotlight specific:
 		float spot_fov = glm::radians(45.0f);
+
+		//near and far planes for shadow maps:
+		float aspect = 0.1f;
+		float near = 100.0f;
+
+		//computed from the above:
+		glm::mat4 make_projection() const;
 	};
 
 	//Scenes, of course, may have many of the above objects:
@@ -124,10 +132,10 @@ struct Scene {
 	std::list< Light > lights;
 
 	//The "draw" function provides a convenient way to pass all the things in a scene to OpenGL:
-	void draw(Camera const &camera) const;
+	void draw(Camera const &camera, bool shadow = false) const;
 
 	//..sometimes, you want to draw with a custom projection matrix and/or light space:
-	void draw(glm::mat4 const &world_to_clip, glm::mat4x3 const &world_to_light = glm::mat4x3(1.0f)) const;
+	void draw(glm::mat4 const &world_to_clip, glm::mat4x3 const &world_to_light = glm::mat4x3(1.0f), bool shadow = false) const;
 
 	//add transforms/objects/cameras from a scene file to this scene:
 	// the 'on_drawable' callback gives your code a chance to look up mesh data and make Drawables:

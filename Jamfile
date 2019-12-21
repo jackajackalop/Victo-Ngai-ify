@@ -166,6 +166,7 @@ GAME_NAMES =
 	DrawSprites
 	ColorTextureProgram
 	SceneProgram
+	ShadowProgram
     GradientProgram
     BilateralishGradientProgram
 	BoneLitColorTextureProgram

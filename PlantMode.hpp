@@ -22,8 +22,10 @@ struct PlantMode : public Mode {
 	virtual void update(float elapsed) override;
 	virtual void draw(glm::uvec2 const &drawable_size) override;
 	//draws out basic scene render, adjusted flat color fills with cell shading
-	void draw_scene(GLuint *basic_tex_, GLuint *color_tex_,
-            GLuint *id_tex_, GLuint *depth_tex_);
+    void draw_shadows(GLuint *shadow_depth_tex_);
+	void draw_scene(GLuint shadow_depth_tex,
+            GLuint *basic_tex_, GLuint *color_tex_, GLuint *id_tex_,
+            GLuint *depth_tex_);
 	//draws out gradients
     void cpu_gradient(GLuint basic_tex, GLuint color_tex, GLuint id_tex);
 	void draw_gradients_linfit(GLuint basic_tex, GLuint color_tex,
@@ -47,4 +49,24 @@ struct PlantMode : public Mode {
 	//scene:
 	Scene::Drawable *plant = nullptr;
 
+    //glm::mat4 light_mat = glm::ortho( -10.0f, 10.0f, -10.0f, 10.0f, 0.0f, 100.0f);
+    glm::mat4 light_mat = glm::perspective(glm::radians(45.0f), 1.0f, 0.1f, 1000.0f);
+    glm::quat light_rotation = glm::quat(0.953f, 0.217f, 0.206f, 0.0f);
+            //glm::vec3(glm::radians(25.0f), glm::radians(25.0f), 0.0f));
+    glm::vec3 position = glm::vec3(0.0f, -200.0f, 400.0f);
+
+    glm::mat4 make_light_to_local(glm::quat rotation) const {
+        glm::vec3 inv_scale = glm::vec3(1.0, 1.0, 1.0);
+        return glm::mat4( //un-scale
+    		        glm::vec4(inv_scale.x, 0.0f, 0.0f, 0.0f),
+        	    	glm::vec4(0.0f, inv_scale.y, 0.0f, 0.0f),
+		            glm::vec4(0.0f, 0.0f, inv_scale.z, 0.0f),
+            		glm::vec4(0.0f, 0.0f, 0.0f, 1.0f))
+            * glm::mat4_cast(glm::inverse(light_rotation)) //un-rotate
+            * glm::mat4( //un-translate
+            		glm::vec4(1.0f, 0.0f, 0.0f, 0.0f),
+        	    	glm::vec4(0.0f, 1.0f, 0.0f, 0.0f),
+        		    glm::vec4(0.0f, 0.0f, 1.0f, 0.0f),
+    		        glm::vec4(-position, 1.0f));
+    }
 };
