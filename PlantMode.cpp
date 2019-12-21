@@ -345,7 +345,7 @@ void PlantMode::draw_scene(GLuint shadow_depth_tex, GLuint *basic_tex_,
 			0.5f, 0.5f, 0.5f+0.00001f /* <-- bias */, 1.0f
 		)
 		//this is the world-to-clip matrix used when rendering the shadow map:
-		* light_mat * make_light_to_local();
+		* light_mat * make_light_to_local(light_rotation);
     glUniformMatrix4fv(scene_program->LIGHT_TO_SPOT, 1, GL_FALSE,
             glm::value_ptr(world_to_spot));
     scene->draw(*camera);
