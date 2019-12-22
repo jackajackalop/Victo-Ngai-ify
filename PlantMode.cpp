@@ -530,7 +530,7 @@ void PlantMode::cpu_gradient(GLuint basic_tex, GLuint color_tex,
 }
 
 void PlantMode::draw_gradients_linfit(GLuint basic_tex, GLuint color_tex,
-        GLuint id_tex, GLuint *gradient_tex_)
+        GLuint toon_tex, GLuint id_tex, GLuint *gradient_tex_)
 {
     assert(gradient_tex_);
     auto &gradient_tex = *gradient_tex_;
@@ -721,7 +721,7 @@ void PlantMode::draw(glm::uvec2 const &drawable_size) {
                 textures.id_tex, &textures.gradient_tex);
     }else if(show >= GRADIENTS_LINFIT){
         draw_gradients_linfit(textures.basic_tex, textures.color_tex,
-                textures.id_tex, &textures.gradient_tex);
+                textures.toon_tex, textures.id_tex, &textures.gradient_tex);
     }
     if(show >= SHADED) {
         draw_shading(textures.gradient_tex, textures.toon_tex,

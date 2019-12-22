@@ -29,7 +29,7 @@ struct PlantMode : public Mode {
 	//draws out gradients
     void cpu_gradient(GLuint basic_tex, GLuint color_tex, GLuint id_tex);
 	void draw_gradients_linfit(GLuint basic_tex, GLuint color_tex,
-                        GLuint id_tex, GLuint *gradient_tex_);
+                        GLuint toon_tex, GLuint id_tex, GLuint *gradient_tex_);
     void draw_gradients_cpu(GLuint basic_tex, GLuint color_tex,
                         GLuint id_tex, GLuint *gradient_tex_);
     void draw_shading(GLuint gradient_tex, GLuint toon_tex,
