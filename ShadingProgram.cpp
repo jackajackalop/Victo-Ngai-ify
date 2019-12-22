@@ -26,7 +26,8 @@ ShadingProgram::ShadingProgram() {
         "   ivec2 coord = ivec2(gl_FragCoord.xy); \n"
         "   vec4 gradient = texelFetch(gradient_tex, coord, 0); \n"
         "   vec4 toon = texelFetch(toon_tex, coord, 0); \n"
-        "   shading_out = gradient-toon; \n"
+        "   shading_out = gradient; \n"
+        "   if(toon.rgb!=vec3(0.0, 0.0, 0.0)) shading_out = toon; \n"
 		"}\n"
 	);
 	glUseProgram(program); //bind program -- glUniform* calls refer to this program now

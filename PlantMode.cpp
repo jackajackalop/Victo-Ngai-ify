@@ -56,6 +56,10 @@ static Load< GLuint > lut_tex(LoadTagDefault, []() -> GLuint const *{
         return new GLuint(load_LUT(data_path("lut-fixed.cube")));
         });
 
+static Load< GLuint > shadow_lut_tex(LoadTagDefault, []() -> GLuint const *{
+        return new GLuint(load_LUT(data_path("shadow_lut.cube")));
+        });
+
 static Load< Scene > scene(LoadTagLate, []() -> Scene const * {
         Scene *ret = new Scene();
         ret->load(data_path("rat_girl.scene"), [](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
@@ -342,6 +346,8 @@ void PlantMode::draw_scene(GLuint shadow_depth_tex, GLuint *basic_tex_,
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LESS);
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_3D, *lut_tex);
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_3D, *shadow_lut_tex);
     glUseProgram(scene_program->program);
     glm::vec3 sun_dir = light_rotation*glm::vec3(0.0, 0.0, 1.0);
     glUniform3fv(scene_program->sun_direction, 1, glm::value_ptr(sun_dir));

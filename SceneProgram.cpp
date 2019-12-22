@@ -49,6 +49,7 @@ SceneProgram::SceneProgram() {
 		"#version 330\n"
         "uniform sampler2DShadow shadow_depth_tex; \n"
         "uniform sampler3D lut_tex; \n"
+        "uniform sampler3D shadow_lut_tex; \n"
         "uniform int lut_size; \n"
         "uniform vec3 sun_direction; \n"
         "uniform int id; \n"
@@ -83,11 +84,11 @@ SceneProgram::SceneProgram() {
         "   vec3 scale = vec3(lut_size - 1.0)/lut_size; \n"
         "   vec3 offset = vec3(1.0/(2.0*lut_size)); \n"
         "   vec3 lut_color = texture(lut_tex, scale*color_out.rgb+offset).rgb; \n"
+        "   vec3 shadow_lut_color = texture(shadow_lut_tex, scale*lut_color+offset).rgb; \n"
          "   color_out = vec4(lut_color, 1.0); \n"
 
          //toon shading
-         "  vec3 shade_color = lut_color*0.8; \n"
-         "  if(nl<0.1) toon_out = vec4(shade_color, 1.0); \n"
+         "  if(nl<0.3) toon_out = vec4(shadow_lut_color, 1.0); \n"
          "  else toon_out = vec4(0.0, 0.0, 0.0, 1.0); \n"
 		"}\n"
 	);
@@ -114,6 +115,7 @@ SceneProgram::SceneProgram() {
 
 	glUniform1i(glGetUniformLocation(program, "shadow_depth_tex"), 0);
 	glUniform1i(glGetUniformLocation(program, "lut_tex"), 1);
+	glUniform1i(glGetUniformLocation(program, "shadow_lut_tex"), 2);
 
 	glUseProgram(0); //unbind program -- glUniform* calls refer to ??? now
 }
