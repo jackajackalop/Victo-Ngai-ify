@@ -60,30 +60,35 @@ SceneProgram::SceneProgram() {
 		"layout(location=0) out vec4 basic_out;\n"
 		"layout(location=1) out vec4 color_out;\n"
         "layout(location=2) out vec4 id_out; \n"
+        "layout(location=3) out vec4 toon_out; \n"
 
 		"void main() {\n"
         "   float id_color = float(id)/255.0; \n"
         "   id_out = vec4(id_color, id_color, id_color, 1.0); \n"
 		"	vec3 n = normalize(normal);\n"
-		//"	vec3 l = normalize(vec3(0.1, 0.1, 1.0));\n"
         "   vec3 l = sun_direction; \n"
 		"	vec4 albedo = color;\n"
 
 		//simple hemispherical lighting model:
 		"	float nl = max(0.0, dot(n,l));\n"
 		"	vec3 light = mix(vec3(0.0,0.0,0.1), vec3(1.0,1.0,0.95), nl*0.5+0.5);\n"
-        "   light *= vec3(0.2, 0.2, 0.2); \n"
+//        "   light *= vec3(0.2, 0.2, 0.2); \n"
 
         //shadow calculations
 		"	float shadow = textureProj(shadow_depth_tex, shadowCoord);\n"
-		"	light += nl*shadow;\n"
+//		"	light += nl*shadow;\n"
 
 		"	basic_out = vec4(light*albedo.rgb, albedo.a);\n"
         "   color_out = albedo; \n"
         "   vec3 scale = vec3(lut_size - 1.0)/lut_size; \n"
         "   vec3 offset = vec3(1.0/(2.0*lut_size)); \n"
         "   vec3 lut_color = texture(lut_tex, scale*color_out.rgb+offset).rgb; \n"
-        "   color_out = vec4(lut_color, 1.0); \n"
+         "   color_out = vec4(lut_color, 1.0); \n"
+
+         //toon shading
+         "  vec3 shade_color = lut_color*0.8; \n"
+         "  if(nl<0.1) toon_out = vec4(shade_color, 1.0); \n"
+         "  else toon_out = vec4(0.0, 0.0, 0.0, 1.0); \n"
 		"}\n"
 	);
 	//As you can see above, adjacent strings in C/C++ are concatenated.

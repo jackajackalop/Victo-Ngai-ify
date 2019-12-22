@@ -25,13 +25,15 @@ struct PlantMode : public Mode {
     void draw_shadows(GLuint *shadow_depth_tex_);
 	void draw_scene(GLuint shadow_depth_tex,
             GLuint *basic_tex_, GLuint *color_tex_, GLuint *id_tex_,
-            GLuint *depth_tex_);
+            GLuint *toon_tex_, GLuint *depth_tex_);
 	//draws out gradients
     void cpu_gradient(GLuint basic_tex, GLuint color_tex, GLuint id_tex);
 	void draw_gradients_linfit(GLuint basic_tex, GLuint color_tex,
                         GLuint id_tex, GLuint *gradient_tex_);
     void draw_gradients_cpu(GLuint basic_tex, GLuint color_tex,
                         GLuint id_tex, GLuint *gradient_tex_);
+    void draw_shading(GLuint gradient_tex, GLuint toon_tex,
+                        GLuint *shaded_tex_);
 	//paper textures
 	void draw_texture();
 	//screen tones in shadows
