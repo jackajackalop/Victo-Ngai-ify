@@ -169,6 +169,7 @@ GAME_NAMES =
 	ShadowProgram
     GradientProgram
     ShadingProgram
+    SurfaceProgram
     BilateralishGradientProgram
 	BoneLitColorTextureProgram
 	Sprite

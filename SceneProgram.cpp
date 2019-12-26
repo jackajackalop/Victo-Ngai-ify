@@ -80,16 +80,16 @@ SceneProgram::SceneProgram() {
 //		"	light += nl*shadow;\n"
 
 		"	basic_out = vec4(light*albedo.rgb, albedo.a);\n"
-        "   color_out = albedo; \n"
+        "   color_out = basic_out; \n"
         "   vec3 scale = vec3(lut_size - 1.0)/lut_size; \n"
         "   vec3 offset = vec3(1.0/(2.0*lut_size)); \n"
         "   vec3 lut_color = texture(lut_tex, scale*color_out.rgb+offset).rgb; \n"
         "   vec3 shadow_lut_color = texture(shadow_lut_tex, scale*lut_color+offset).rgb; \n"
-         "   color_out = vec4(lut_color, 1.0); \n"
+        "   color_out = vec4(lut_color, 1.0); \n"
 
          //toon shading
          "  if(nl<0.3) toon_out = vec4(shadow_lut_color, 1.0); \n"
-         "  else toon_out = vec4(0.0, 0.0, 0.0, 1.0); \n"
+         "  else toon_out = vec4(0.0, 0.0, 0.0, 0.0); \n"
 		"}\n"
 	);
 	//As you can see above, adjacent strings in C/C++ are concatenated.

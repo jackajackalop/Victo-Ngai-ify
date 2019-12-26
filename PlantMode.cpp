@@ -5,6 +5,7 @@
 #include "SceneProgram.hpp"
 #include "GradientProgram.hpp"
 #include "ShadingProgram.hpp"
+#include "SurfaceProgram.hpp"
 #include "BilateralishGradientProgram.hpp"
 #include "Load.hpp"
 #include "Mesh.hpp"
@@ -32,11 +33,13 @@ enum Stages {
     GRADIENTS_BLUR = 2,
     GRADIENTS_LINFIT = 3,
     SHADOWS = 4,
-    SHADED = 5
+    SHADED = 5,
+    SURFACE = 6
 };
 
 int show = 1;
 int lut_size = 64;
+bool surfaced = false;
 
 GLuint meshes_for_scene_program = 0;
 Scene::Transform *camera_parent_transform = nullptr;
@@ -44,59 +47,27 @@ Scene::Camera *camera = nullptr;
 glm::vec2 camera_spin = glm::vec2(0.0f, 0.0f);
 glm::vec3 camera_shift = glm::vec3(0.0f, 0.0f, 0.0f);
 
+GLuint load_texture(std::string const &filename) {
+	glm::uvec2 size;
+	std::vector< glm::u8vec4 > data;
+	load_png(filename, &size, &data, LowerLeftOrigin);
 
-static Load< MeshBuffer > meshes(LoadTagDefault, []() -> MeshBuffer const * {
-        MeshBuffer *ret = new MeshBuffer(data_path("rat_girl.pnct"));
-        meshes_for_scene_program = ret->make_vao_for_program(scene_program->program);
-        return ret;
-        });
+	GLuint tex = 0;
+	glGenTextures(1, &tex);
+	glBindTexture(GL_TEXTURE_2D, tex);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, size.x, size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, data.data());
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glGenerateMipmap(GL_TEXTURE_2D);
+	glBindTexture(GL_TEXTURE_2D, 0);
+	GL_ERRORS();
 
-GLuint load_LUT(std::string const &filename);
-static Load< GLuint > lut_tex(LoadTagDefault, []() -> GLuint const *{
-        return new GLuint(load_LUT(data_path("lut-fixed.cube")));
-        });
+	return tex;
+}
 
-static Load< GLuint > shadow_lut_tex(LoadTagDefault, []() -> GLuint const *{
-        return new GLuint(load_LUT(data_path("shadow_lut.cube")));
-        });
-
-static Load< Scene > scene(LoadTagLate, []() -> Scene const * {
-        Scene *ret = new Scene();
-        ret->load(data_path("rat_girl.scene"), [](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
-                auto &mesh = meshes->lookup(mesh_name);
-                scene.drawables.emplace_back(transform);
-                Scene::Drawable::Pipeline &pipeline = scene.drawables.back().pipeline;
-                pipeline = scene_program_pipeline;
-                pipeline.vao = meshes_for_scene_program;
-                pipeline.type = mesh.type;
-                pipeline.start = mesh.start;
-                pipeline.count = mesh.count;
-                });
-
-
-        //look up camera parent transform:
-        for (auto t = ret->transforms.begin(); t != ret->transforms.end(); ++t) {
-            if (t->name == "CameraParent") {
-                if (camera_parent_transform) throw std::runtime_error("Multiple 'CameraParent' transforms in scene.");
-                camera_parent_transform = &(*t);
-            }
-        }
-        if (!camera_parent_transform) throw std::runtime_error("No 'CameraParent' transform in scene.");
-        camera_shift = camera_parent_transform->position;
-
-        //look up the camera:
-        for (auto c = ret->cameras.begin(); c != ret->cameras.end(); ++c) {
-            if (c->transform->name == "Camera") {
-                if (camera) throw std::runtime_error("Multiple 'Camera' objects in scene.");
-                camera = &(*c);
-            }
-        }
-        if (!camera) throw std::runtime_error("No 'Camera' camera in scene.");
-
-        return ret;
-});
-
-GLuint load_texture(int width, int height, std::vector<GLfloat> data) {
+GLuint load_texture_from_data(int width, int height, std::vector<GLfloat> data) {
     GLuint tex = 0;
     glGenTextures(1, &tex);
     glBindTexture(GL_TEXTURE_2D, tex);
@@ -153,6 +124,60 @@ GLuint load_LUT(std::string const &filename) {
     return tex;
 }
 
+static Load< MeshBuffer > meshes(LoadTagDefault, []() -> MeshBuffer const * {
+        MeshBuffer *ret = new MeshBuffer(data_path("rat_girl.pnct"));
+        meshes_for_scene_program = ret->make_vao_for_program(scene_program->program);
+        return ret;
+        });
+
+GLuint load_LUT(std::string const &filename);
+static Load< GLuint > lut_tex(LoadTagDefault, []() -> GLuint const *{
+        return new GLuint(load_LUT(data_path("lut.cube")));
+        });
+
+static Load< GLuint > shadow_lut_tex(LoadTagDefault, []() -> GLuint const *{
+        return new GLuint(load_LUT(data_path("shadow_lut.cube")));
+        });
+
+static Load< GLuint > paper_tex(LoadTagDefault, [](){
+        return new GLuint (load_texture(data_path("textures/paper.png")));
+        });
+
+static Load< Scene > scene(LoadTagLate, []() -> Scene const * {
+        Scene *ret = new Scene();
+        ret->load(data_path("rat_girl.scene"), [](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
+                auto &mesh = meshes->lookup(mesh_name);
+                scene.drawables.emplace_back(transform);
+                Scene::Drawable::Pipeline &pipeline = scene.drawables.back().pipeline;
+                pipeline = scene_program_pipeline;
+                pipeline.vao = meshes_for_scene_program;
+                pipeline.type = mesh.type;
+                pipeline.start = mesh.start;
+                pipeline.count = mesh.count;
+                });
+
+
+        //look up camera parent transform:
+        for (auto t = ret->transforms.begin(); t != ret->transforms.end(); ++t) {
+            if (t->name == "CameraParent") {
+                if (camera_parent_transform) throw std::runtime_error("Multiple 'CameraParent' transforms in scene.");
+                camera_parent_transform = &(*t);
+            }
+        }
+        if (!camera_parent_transform) throw std::runtime_error("No 'CameraParent' transform in scene.");
+        camera_shift = camera_parent_transform->position;
+
+        //look up the camera:
+        for (auto c = ret->cameras.begin(); c != ret->cameras.end(); ++c) {
+            if (c->transform->name == "Camera") {
+                if (camera) throw std::runtime_error("Multiple 'Camera' objects in scene.");
+                camera = &(*c);
+            }
+        }
+        if (!camera) throw std::runtime_error("No 'Camera' camera in scene.");
+
+        return ret;
+});
 
 GLuint gradient_png_tex = 0;
 
@@ -199,6 +224,8 @@ bool PlantMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size
             show = GRADIENTS_LINFIT;
         }else if(evt.key.keysym.scancode == SDL_SCANCODE_4){
             show = SHADED;
+        }else if(evt.key.keysym.scancode == SDL_SCANCODE_5){
+            show = SURFACE;
         }
     }
 
@@ -220,10 +247,12 @@ struct Textures {
     GLuint color_tex = 0;
     GLuint id_tex = 0;
     GLuint toon_tex = 0;
-    GLuint depth_tex = 0;
     GLuint gradient_tex = 0;
+    GLuint gradient_toon_tex = 0;
     GLuint shaded_tex = 0;
+    GLuint surface_tex = 0;
 
+	GLuint depth_tex = 0;
 	GLuint shadow_depth_tex = 0;
 
     GLuint final_tex = 0;
@@ -249,11 +278,13 @@ struct Textures {
             alloc_tex(&color_tex, GL_RGBA8, GL_RGBA);
             alloc_tex(&id_tex, GL_RGBA8, GL_RGBA);
             alloc_tex(&toon_tex, GL_RGBA8, GL_RGBA);
-            alloc_tex(&depth_tex, GL_DEPTH_COMPONENT24, GL_DEPTH_COMPONENT);
             alloc_tex(&gradient_tex, GL_RGBA8, GL_RGBA);
+            alloc_tex(&gradient_toon_tex, GL_RGBA8, GL_RGBA);
+            alloc_tex(&depth_tex, GL_DEPTH_COMPONENT24, GL_DEPTH_COMPONENT);
             alloc_tex(&shadow_depth_tex, GL_DEPTH_COMPONENT24,
                     GL_DEPTH_COMPONENT);
             alloc_tex(&shaded_tex, GL_RGBA8, GL_RGBA);
+            alloc_tex(&surface_tex, GL_RGBA8, GL_RGBA);
             alloc_tex(&final_tex, GL_RGBA8, GL_RGBA);
             GL_ERRORS();
         }
@@ -294,19 +325,18 @@ void PlantMode::draw_shadows(GLuint *shadow_depth_tex_)
 }
 
 void PlantMode::draw_scene(GLuint shadow_depth_tex, GLuint *basic_tex_,
-        GLuint *color_tex_, GLuint *id_tex_, GLuint *toon_tex_,
-        GLuint *depth_tex_)
+        GLuint *color_tex_, GLuint *depth_tex_, GLuint *id_tex_, GLuint *toon_tex_)
 {
     assert(basic_tex_);
     assert(color_tex_);
+    assert(depth_tex_);
     assert(id_tex_);
     assert(toon_tex_);
-    assert(depth_tex_);
     auto &basic_tex = *basic_tex_;
     auto &color_tex = *color_tex_;
+    auto &depth_tex = *depth_tex_;
     auto &id_tex = *id_tex_;
     auto &toon_tex = *toon_tex_;
-    auto &depth_tex = *depth_tex_;
 
     static GLuint fb = 0;
     if(fb==0) glGenFramebuffers(1, &fb);
@@ -526,22 +556,27 @@ void PlantMode::cpu_gradient(GLuint basic_tex, GLuint color_tex,
             gradient[index*4+3] = 1.0f;
         }
     }
-    gradient_png_tex = load_texture(width, height, gradient);
+    gradient_png_tex = load_texture_from_data(width, height, gradient);
 }
 
 void PlantMode::draw_gradients_linfit(GLuint basic_tex, GLuint color_tex,
-        GLuint toon_tex, GLuint id_tex, GLuint *gradient_tex_)
+        GLuint toon_tex, GLuint id_tex, GLuint *gradient_tex_,
+        GLuint *gradient_toon_tex_)
 {
     assert(gradient_tex_);
+    assert(gradient_toon_tex_);
     auto &gradient_tex = *gradient_tex_;
+    auto &gradient_toon_tex = *gradient_toon_tex_;
 
     static GLuint fb = 0;
     if(fb == 0) glGenFramebuffers(1, &fb);
     glBindFramebuffer(GL_FRAMEBUFFER, fb);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
             gradient_tex, 0);
-    GLenum bufs[1] = {GL_COLOR_ATTACHMENT0};
-    glDrawBuffers(1, bufs);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D,
+            gradient_toon_tex, 0);
+    GLenum bufs[2] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1};
+    glDrawBuffers(2, bufs);
     check_fb();
 
     //set glViewport
@@ -558,7 +593,8 @@ void PlantMode::draw_gradients_linfit(GLuint basic_tex, GLuint color_tex,
     glBlendEquation(GL_FUNC_ADD);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    int chunk_num = scene->drawables.size();
+    int chunk_num = 2*scene->drawables.size();
+    //*2 because each chunk has an associated toon that also gets a gradient
     std::vector<float> wsum (chunk_num, 0.0f);
     std::vector<float> hsum (chunk_num, 0.0f);
     std::vector<float> w2sum (chunk_num, 0.0f);
@@ -616,8 +652,12 @@ void PlantMode::draw_gradients_linfit(GLuint basic_tex, GLuint color_tex,
     glBufferData(GL_SHADER_STORAGE_BUFFER, chunk_num*sizeof(int), n.data(), GL_DYNAMIC_COPY);
 
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, color_tex);
+    glBindTexture(GL_TEXTURE_2D, basic_tex);
     glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, color_tex);
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, toon_tex);
+    glActiveTexture(GL_TEXTURE3);
     glBindTexture(GL_TEXTURE_2D, id_tex);
 
     glDispatchCompute(textures.size.x, textures.size.y, 1);
@@ -638,6 +678,8 @@ void PlantMode::draw_gradients_linfit(GLuint basic_tex, GLuint color_tex,
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, color_tex);
     glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, toon_tex);
+    glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, id_tex);
 
     glUseProgram(gradient_program->program);
@@ -649,7 +691,7 @@ void PlantMode::draw_gradients_linfit(GLuint basic_tex, GLuint color_tex,
     GL_ERRORS();
 }
 
-void PlantMode::draw_shading(GLuint gradient_tex, GLuint toon_tex,
+void PlantMode::draw_shading(GLuint gradient_tex, GLuint gradient_toon_tex,
         GLuint *shaded_tex_){
     assert(shaded_tex_);
     auto &shaded_tex = *shaded_tex_;
@@ -678,7 +720,7 @@ void PlantMode::draw_shading(GLuint gradient_tex, GLuint toon_tex,
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, gradient_tex);
     glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, toon_tex);
+    glBindTexture(GL_TEXTURE_2D, gradient_toon_tex);
 
     glUseProgram(shading_program->program);
     glDrawArrays(GL_TRIANGLES, 0, 3);
@@ -690,8 +732,45 @@ void PlantMode::draw_shading(GLuint gradient_tex, GLuint toon_tex,
 
 }
 
-void PlantMode::draw_texture()
+void PlantMode::draw_surface(GLuint paper_tex, GLuint *surface_tex_)
 {
+    assert(surface_tex_);
+    auto &surface_tex = *surface_tex_;
+
+    static GLuint fb = 0;
+    if(fb==0) glGenFramebuffers(1, &fb);
+    glBindFramebuffer(GL_FRAMEBUFFER, fb);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+            surface_tex, 0);
+    GLenum bufs[1] = {GL_COLOR_ATTACHMENT0};
+    glDrawBuffers(1, bufs);
+    check_fb();
+
+    //Draw scene:
+    glBindFramebuffer(GL_FRAMEBUFFER, fb);
+    glViewport(0, 0, textures.size.x, textures.size.y);
+    camera->aspect = textures.size.x / float(textures.size.y);
+
+    GLfloat black[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+    glClearBufferfv(GL_COLOR, 0, black);
+
+    //set up basic OpenGL state:
+    glEnable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
+    glBlendEquation(GL_FUNC_ADD);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, paper_tex);
+
+    glUseProgram(surface_program->program);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    GL_ERRORS();
+
 
 }
 
@@ -712,22 +791,26 @@ void PlantMode::draw_vignette(){
 void PlantMode::draw(glm::uvec2 const &drawable_size) {
     textures.allocate(drawable_size);
 
+    if(show>=SURFACE && !surfaced){
+        draw_surface(*paper_tex, &textures.surface_tex);
+        surfaced = true;
+    }
     draw_shadows(&textures.shadow_depth_tex);
     draw_scene(textures.shadow_depth_tex,
-            &textures.basic_tex, &textures.color_tex, &textures.id_tex,
-            &textures.toon_tex, &textures.depth_tex);
+            &textures.basic_tex, &textures.color_tex, &textures.depth_tex,
+            &textures.id_tex, &textures.toon_tex);
     if(show == GRADIENTS_BLUR){
         draw_gradients_cpu(textures.basic_tex, textures.color_tex,
                 textures.id_tex, &textures.gradient_tex);
     }else if(show >= GRADIENTS_LINFIT){
         draw_gradients_linfit(textures.basic_tex, textures.color_tex,
-                textures.toon_tex, textures.id_tex, &textures.gradient_tex);
+                textures.toon_tex, textures.id_tex, &textures.gradient_tex,
+                &textures.gradient_toon_tex);
     }
     if(show >= SHADED) {
-        draw_shading(textures.gradient_tex, textures.toon_tex,
+        draw_shading(textures.gradient_tex, textures.gradient_toon_tex,
                 &textures.shaded_tex);
     }
-    draw_texture();
     draw_screentones();
     draw_lines();
     draw_vignette();
@@ -742,7 +825,7 @@ void PlantMode::draw(glm::uvec2 const &drawable_size) {
         glBindTexture(GL_TEXTURE_2D, textures.color_tex);
     }else if(show == GRADIENTS_BLUR || show == GRADIENTS_LINFIT){
         glBindTexture(GL_TEXTURE_2D, textures.gradient_tex);
-    }else if(show == SHADED){
+    }else if(show >= SHADED){
         glBindTexture(GL_TEXTURE_2D, textures.shaded_tex);
     }
 
