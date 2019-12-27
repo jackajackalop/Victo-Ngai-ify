@@ -4,9 +4,9 @@
 #include "Load.hpp"
 #include "Scene.hpp"
 
-struct ShadingProgram {
-	ShadingProgram();
-	~ShadingProgram();
+struct CombineProgram {
+	CombineProgram();
+	~CombineProgram();
 
 	GLuint program = 0;
 
@@ -14,4 +14,4 @@ struct ShadingProgram {
     GLuint height = -1U;
 };
 
-extern Load< ShadingProgram > shading_program;
+extern Load< CombineProgram > combine_program;

@@ -4,7 +4,7 @@
 #include "CopyToScreenProgram.hpp"
 #include "SceneProgram.hpp"
 #include "GradientProgram.hpp"
-#include "ShadingProgram.hpp"
+#include "CombineProgram.hpp"
 #include "SurfaceProgram.hpp"
 #include "BilateralishGradientProgram.hpp"
 #include "Load.hpp"
@@ -261,6 +261,7 @@ struct Textures {
 
         if (size != new_size) {
             size = new_size;
+            surfaced = false;
 
             auto alloc_tex = [this](GLuint *tex, GLint internalformat, GLint format){
                 if (*tex == 0) glGenTextures(1, tex);
@@ -691,8 +692,8 @@ void PlantMode::draw_gradients_linfit(GLuint basic_tex, GLuint color_tex,
     GL_ERRORS();
 }
 
-void PlantMode::draw_shading(GLuint gradient_tex, GLuint gradient_toon_tex,
-        GLuint *shaded_tex_){
+void PlantMode::draw_combine(GLuint gradient_tex, GLuint gradient_toon_tex,
+        GLuint surface_tex, GLuint *shaded_tex_){
     assert(shaded_tex_);
     auto &shaded_tex = *shaded_tex_;
 
@@ -721,8 +722,10 @@ void PlantMode::draw_shading(GLuint gradient_tex, GLuint gradient_toon_tex,
     glBindTexture(GL_TEXTURE_2D, gradient_tex);
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, gradient_toon_tex);
+    glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, surface_tex);
 
-    glUseProgram(shading_program->program);
+    glUseProgram(combine_program->program);
     glDrawArrays(GL_TRIANGLES, 0, 3);
 
     glActiveTexture(GL_TEXTURE0);
@@ -808,8 +811,8 @@ void PlantMode::draw(glm::uvec2 const &drawable_size) {
                 &textures.gradient_toon_tex);
     }
     if(show >= SHADED) {
-        draw_shading(textures.gradient_tex, textures.gradient_toon_tex,
-                &textures.shaded_tex);
+        draw_combine(textures.gradient_tex, textures.gradient_toon_tex,
+                textures.surface_tex, &textures.shaded_tex);
     }
     draw_screentones();
     draw_lines();
