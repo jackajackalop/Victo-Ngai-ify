@@ -18,9 +18,11 @@ CombineProgram::CombineProgram() {
 	,
 		//fragment shader:
 		"#version 430\n"
+        "uniform sampler2D id_tex; \n"
         "uniform sampler2D gradient_tex; \n"
         "uniform sampler2D gradient_toon_tex; \n"
         "uniform sampler2D surface_tex; \n"
+        "layout (std430, binding=0) buffer nbuffer{ uint n_sum[]; }; \n"
 		"layout(location=0) out vec4 combine_out;\n"
 
         "vec4 pow_col(vec4 base, float exp){ \n"
@@ -29,9 +31,13 @@ CombineProgram::CombineProgram() {
 
 		"void main() {\n"
         "   ivec2 coord = ivec2(gl_FragCoord.xy); \n"
+        "   int id = int(texelFetch(id_tex, coord, 0)*255.0); \n"
+        "   uint n = n_sum[id]; \n"
 
         //paper distortion
+        "   int TEXTURE_LIMIT = 1000; \n"
         "   vec4 surfaceColor = texelFetch(surface_tex, coord, 0); \n"
+        "   if(n<TEXTURE_LIMIT) surfaceColor = vec4(0.0, 0.0, 0.0, 0.0); \n"
         "   vec2 shift_amt = surfaceColor.gb; \n"
         "   ivec2 shifted_coord = ivec2(coord+shift_amt); \n"
 
@@ -42,6 +48,7 @@ CombineProgram::CombineProgram() {
 
         //paper granulation
         "   vec4 surface = texelFetch(surface_tex, shifted_coord, 0); \n"
+        "   if(n<TEXTURE_LIMIT) surface = vec4(1.0, 1.0, 1.0, 1.0);"
         "   float Piv = 0.5*(1.0-surface.r); \n"
         "   float density_amt = 0.5; \n"
         "   vec4 powed = pow_col(shaded, 1.0+density_amt*Piv); \n"
@@ -51,9 +58,10 @@ CombineProgram::CombineProgram() {
 	);
 	glUseProgram(program); //bind program -- glUniform* calls refer to this program now
 
-    glUniform1i(glGetUniformLocation(program, "gradient_tex"), 0);
-    glUniform1i(glGetUniformLocation(program, "gradient_toon_tex"), 1);
-    glUniform1i(glGetUniformLocation(program, "surface_tex"), 2);
+    glUniform1i(glGetUniformLocation(program, "id_tex"), 0);
+    glUniform1i(glGetUniformLocation(program, "gradient_tex"), 1);
+    glUniform1i(glGetUniformLocation(program, "gradient_toon_tex"), 2);
+    glUniform1i(glGetUniformLocation(program, "surface_tex"), 3);
     //TODO shadow lut
 
 	glUseProgram(0); //unbind program -- glUniform* calls refer to ??? now

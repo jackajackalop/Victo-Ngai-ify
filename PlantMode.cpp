@@ -41,6 +41,7 @@ int show = 1;
 int lut_size = 64;
 bool surfaced = false;
 
+GLuint n_ssbo;
 GLuint meshes_for_scene_program = 0;
 Scene::Transform *camera_parent_transform = nullptr;
 Scene::Camera *camera = nullptr;
@@ -617,7 +618,6 @@ void PlantMode::draw_gradients_linfit(GLuint basic_tex, GLuint color_tex,
     GLuint wvsum_ssbo;
     GLuint hvsum_ssbo;
     GLuint vsum_ssbo;
-    GLuint n_ssbo;
 
     glUseProgram(calculate_gradient_program->program);
     glUniform1i(calculate_gradient_program->width, textures.size.x);
@@ -666,16 +666,6 @@ void PlantMode::draw_gradients_linfit(GLuint basic_tex, GLuint color_tex,
     glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
     //draw the gradient using the calculated values
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, wsum_ssbo);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, hsum_ssbo);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, w2sum_ssbo);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, h2sum_ssbo);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, whsum_ssbo);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, wvsum_ssbo);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 6, hvsum_ssbo);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, vsum_ssbo);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 8, n_ssbo);
-
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, color_tex);
     glActiveTexture(GL_TEXTURE1);
@@ -688,12 +678,11 @@ void PlantMode::draw_gradients_linfit(GLuint basic_tex, GLuint color_tex,
     glUniform1i(gradient_program->height, textures.size.y);
     glDrawArrays(GL_TRIANGLES, 0, 3);
 
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
     GL_ERRORS();
 }
 
-void PlantMode::draw_combine(GLuint gradient_tex, GLuint gradient_toon_tex,
-        GLuint surface_tex, GLuint *shaded_tex_){
+void PlantMode::draw_combine(GLuint id_tex, GLuint gradient_tex,
+        GLuint gradient_toon_tex, GLuint surface_tex, GLuint *shaded_tex_){
     assert(shaded_tex_);
     auto &shaded_tex = *shaded_tex_;
 
@@ -719,11 +708,14 @@ void PlantMode::draw_combine(GLuint gradient_tex, GLuint gradient_toon_tex,
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, gradient_tex);
+    glBindTexture(GL_TEXTURE_2D, id_tex);
     glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, gradient_toon_tex);
+    glBindTexture(GL_TEXTURE_2D, gradient_tex);
     glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_2D, gradient_toon_tex);
+    glActiveTexture(GL_TEXTURE3);
     glBindTexture(GL_TEXTURE_2D, surface_tex);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, n_ssbo);
 
     glUseProgram(combine_program->program);
     glDrawArrays(GL_TRIANGLES, 0, 3);
@@ -794,7 +786,7 @@ void PlantMode::draw_vignette(){
 void PlantMode::draw(glm::uvec2 const &drawable_size) {
     textures.allocate(drawable_size);
 
-    if(show>=SURFACE && !surfaced){
+    if(show >= GRADIENTS_LINFIT && !surfaced){
         draw_surface(*paper_tex, &textures.surface_tex);
         surfaced = true;
     }
@@ -811,8 +803,9 @@ void PlantMode::draw(glm::uvec2 const &drawable_size) {
                 &textures.gradient_toon_tex);
     }
     if(show >= SHADED) {
-        draw_combine(textures.gradient_tex, textures.gradient_toon_tex,
-                textures.surface_tex, &textures.shaded_tex);
+        draw_combine(textures.id_tex, textures.gradient_tex,
+                textures.gradient_toon_tex, textures.surface_tex,
+                &textures.shaded_tex);
     }
     draw_screentones();
     draw_lines();
@@ -828,8 +821,10 @@ void PlantMode::draw(glm::uvec2 const &drawable_size) {
         glBindTexture(GL_TEXTURE_2D, textures.color_tex);
     }else if(show == GRADIENTS_BLUR || show == GRADIENTS_LINFIT){
         glBindTexture(GL_TEXTURE_2D, textures.gradient_tex);
-    }else if(show >= SHADED){
+    }else if(show == SHADED){
         glBindTexture(GL_TEXTURE_2D, textures.shaded_tex);
+    }else if(show == SURFACE){
+        glBindTexture(GL_TEXTURE_2D, textures.surface_tex);
     }
 
     glDisable(GL_BLEND);
