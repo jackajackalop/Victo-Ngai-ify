@@ -99,6 +99,7 @@ GradientProgram::GradientProgram() {
         "uniform sampler2D color_tex; \n"
         "uniform sampler2D toon_tex; \n"
         "uniform sampler2D id_tex; \n"
+        "uniform sampler2D normal_tex; \n"
         "uniform int width; \n"
         "uniform int height; \n"
         "layout(std430, binding=0) buffer xbuffer { uint wsums_packed[]; }; \n"
@@ -147,6 +148,20 @@ GradientProgram::GradientProgram() {
         "   return !(id==idl && id==idr && id==idu && id==idd);"
         "} \n"
 
+        "bool normalCheck(ivec2 coord) { \n"
+        "   float threshold = -0.0000000001; \n"
+        "   vec3 n = texelFetch(normal_tex, coord, 0).xyz; \n"
+        "   vec3 nl = texelFetch(normal_tex, coord+ivec2(-1, 0), 0).xyz; \n"
+        "   vec3 nr = texelFetch(normal_tex, coord+ivec2(1, 0), 0).xyz; \n"
+        "   vec3 nu = texelFetch(normal_tex, coord+ivec2(0, 1), 0).xyz; \n"
+        "   vec3 nd = texelFetch(normal_tex, coord+ivec2(0, -1), 0).xyz; \n"
+        "   float dl = dot(n, nl); \n"
+        "   float dr = dot(n, nr); \n"
+        "   float du = dot(n, nu); \n"
+        "   float dd = dot(n, nd); \n"
+        "   return !(dl>threshold && dr>threshold && du>threshold && dd>threshold);"
+        "} \n"
+
 		"void main() {\n"
         "   ivec2 coord = ivec2(gl_FragCoord.xy); \n"
         "   vec2 eqR = calculate_eq(0, 0); \n"
@@ -171,7 +186,7 @@ GradientProgram::GradientProgram() {
         "       gradient_toon_out = vec4(0.0); \n"
         "   } \n"
 
-        "   if(boundaryCheck(coord)){ \n"
+        "   if(boundaryCheck(coord) || normalCheck(coord)){ \n"
         "       line_out = vec4(0.0, 0.0, 0.0, 1.0);"
         "   } else { \n"
         "       line_out = vec4(0.0); \n"
@@ -186,6 +201,7 @@ GradientProgram::GradientProgram() {
     glUniform1i(glGetUniformLocation(program, "color_tex"), 0);
     glUniform1i(glGetUniformLocation(program, "toon_tex"), 1);
     glUniform1i(glGetUniformLocation(program, "id_tex"), 2);
+    glUniform1i(glGetUniformLocation(program, "normal_tex"), 3);
 
 
 	glUseProgram(0); //unbind program -- glUniform* calls refer to ??? now

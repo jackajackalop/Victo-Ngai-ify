@@ -571,8 +571,8 @@ void PlantMode::cpu_gradient(GLuint basic_tex, GLuint color_tex,
 }
 
 void PlantMode::draw_gradients_linfit(GLuint basic_tex, GLuint color_tex,
-        GLuint toon_tex, GLuint id_tex, GLuint *gradient_tex_,
-        GLuint *gradient_toon_tex_, GLuint *line_tex_)
+        GLuint toon_tex, GLuint id_tex, GLuint normal_tex,
+        GLuint *gradient_tex_, GLuint *gradient_toon_tex_, GLuint *line_tex_)
 {
     assert(gradient_tex_);
     assert(gradient_toon_tex_);
@@ -686,6 +686,8 @@ void PlantMode::draw_gradients_linfit(GLuint basic_tex, GLuint color_tex,
     glBindTexture(GL_TEXTURE_2D, toon_tex);
     glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_2D, id_tex);
+    glActiveTexture(GL_TEXTURE3);
+    glBindTexture(GL_TEXTURE_2D, normal_tex);
 
     glUseProgram(gradient_program->program);
     glUniform1i(gradient_program->width, textures.size.x);
@@ -816,8 +818,9 @@ void PlantMode::draw(glm::uvec2 const &drawable_size) {
                 textures.id_tex, &textures.gradient_tex);
     }else if(show >= GRADIENTS_LINFIT){
         draw_gradients_linfit(textures.basic_tex, textures.color_tex,
-                textures.toon_tex, textures.id_tex, &textures.gradient_tex,
-                &textures.gradient_toon_tex, &textures.line_tex);
+                textures.toon_tex, textures.id_tex, textures.normal_tex,
+                &textures.gradient_tex, &textures.gradient_toon_tex,
+                &textures.line_tex);
     }
     if(show >= SHADED) {
         draw_combine(textures.id_tex, textures.gradient_tex,

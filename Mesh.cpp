@@ -20,11 +20,12 @@ MeshBuffer::MeshBuffer(std::string const &filename) {
 
 	struct Vertex {
 		glm::vec3 Position;
-		glm::vec3 Normal;
+		glm::vec3 GeoNormal;
+		glm::vec3 ShadingNormal;
 		glm::u8vec4 Color;
 		glm::vec2 TexCoord;
 	};
-	static_assert(sizeof(Vertex) == 3*4+3*4+4*1+2*4, "Vertex is packed.");
+	static_assert(sizeof(Vertex) == 3*4+3*4+3*4+4*1+2*4, "Vertex is packed.");
 	std::vector< Vertex > data;
 
 	//read + upload data chunk:
@@ -40,7 +41,8 @@ MeshBuffer::MeshBuffer(std::string const &filename) {
 
 		//store attrib locations:
 		Position = Attrib(buffer, 3, GL_FLOAT, Attrib::AsFloat, sizeof(Vertex), offsetof(Vertex, Position));
-		Normal = Attrib(buffer, 3, GL_FLOAT, Attrib::AsFloat, sizeof(Vertex), offsetof(Vertex, Normal));
+		ShadingNormal = Attrib(buffer, 3, GL_FLOAT, Attrib::AsFloat, sizeof(Vertex), offsetof(Vertex, ShadingNormal));
+		GeoNormal = Attrib(buffer, 3, GL_FLOAT, Attrib::AsFloat, sizeof(Vertex), offsetof(Vertex, GeoNormal));
 		Color = Attrib(buffer, 4, GL_UNSIGNED_BYTE, Attrib::AsFloatFromFixedPoint, sizeof(Vertex), offsetof(Vertex, Color));
 		TexCoord = Attrib(buffer, 2, GL_FLOAT, Attrib::AsFloat, sizeof(Vertex), offsetof(Vertex, TexCoord));
 	} else {
@@ -116,7 +118,8 @@ GLuint MeshBuffer::make_vao_for_program(GLuint program) const {
 	std::map< std::string, Attrib const * > attribs;
 
 	attribs["Position"] = &Position;
-	attribs["Normal"] = &Normal;
+	attribs["GeoNormal"] = &GeoNormal;
+	attribs["ShadingNormal"] = &ShadingNormal;
 	attribs["Color"] = &Color;
 	attribs["TexCoord"] = &TexCoord;
 

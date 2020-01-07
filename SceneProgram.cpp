@@ -28,18 +28,21 @@ SceneProgram::SceneProgram() {
 		"uniform mat3 NORMAL_TO_LIGHT;\n"
         "uniform mat4 LIGHT_TO_SPOT;\n"
 		"in vec4 Position;\n"
-		"in vec3 Normal;\n"
+		"in vec3 GeoNormal;\n"
+		"in vec3 ShadingNormal;\n"
 		"in vec4 Color;\n"
 		"in vec2 TexCoord;\n"
 		"out vec3 position;\n"
-		"out vec3 normal;\n"
+		"out vec3 shadingNormal;\n"
+		"out vec3 geoNormal;\n"
 		"out vec4 color;\n"
 		"out vec2 texCoord;\n"
 		"out vec4 shadowCoord;\n"
 		"void main() {\n"
 		"	gl_Position = OBJECT_TO_CLIP * Position;\n"
 		"	position = OBJECT_TO_LIGHT * Position;\n"
-		"	normal = NORMAL_TO_LIGHT * Normal;\n"
+		"	shadingNormal = NORMAL_TO_LIGHT * ShadingNormal;\n"
+		"	geoNormal = GeoNormal;\n"
 		"	color = Color;\n"
 		"	texCoord = TexCoord;\n"
         "   shadowCoord = LIGHT_TO_SPOT * vec4(position, 1.0); \n"
@@ -54,7 +57,8 @@ SceneProgram::SceneProgram() {
         "uniform vec3 sun_direction; \n"
         "uniform int id; \n"
 		"in vec3 position;\n"
-		"in vec3 normal;\n"
+		"in vec3 geoNormal;\n"
+		"in vec3 shadingNormal;\n"
 		"in vec4 color;\n"
 		"in vec2 texCoord;\n"
         "in vec4 shadowCoord; \n"
@@ -65,10 +69,10 @@ SceneProgram::SceneProgram() {
         "layout(location=4) out vec4 toon_out; \n"
 
 		"void main() {\n"
-        "   normal_out = vec4(normal, 1.0); \n"
+        "   normal_out = vec4(geoNormal, 1.0); \n"
         "   float id_color = float(id)/255.0; \n"
         "   id_out = vec4(id_color, id_color, id_color, 1.0); \n"
-		"	vec3 n = normalize(normal);\n"
+		"	vec3 n = normalize(shadingNormal);\n"
         "   vec3 l = sun_direction; \n"
 		"	vec4 albedo = color;\n"
 
@@ -99,7 +103,8 @@ SceneProgram::SceneProgram() {
 
 	//look up the locations of vertex attributes:
 	Position_vec4 = glGetAttribLocation(program, "Position");
-	Normal_vec3 = glGetAttribLocation(program, "Normal");
+	ShadingNormal_vec3 = glGetAttribLocation(program, "ShadingNormal");
+	GeoNormal_vec3 = glGetAttribLocation(program, "GeoNormal");
 	Color_vec4 = glGetAttribLocation(program, "Color");
 	TexCoord_vec2 = glGetAttribLocation(program, "TexCoord");
 

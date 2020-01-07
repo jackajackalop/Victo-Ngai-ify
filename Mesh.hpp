@@ -40,7 +40,7 @@ struct MeshBuffer {
 	//look up a particular mesh by name:
 	// note: will throw if mesh not found.
 	const Mesh &lookup(std::string const &name) const;
-	
+
 	//build a vertex array object that links this vbo to attributes to a program:
 	// note: will throw if program defines attributes not contained in this buffer
 	GLuint make_vao_for_program(GLuint program) const;
@@ -55,7 +55,8 @@ struct MeshBuffer {
 
 	//describe the format of the mesh:
 	Attrib Position;
-	Attrib Normal;
+	Attrib ShadingNormal;
+	Attrib GeoNormal;
 	Attrib Color;
 	Attrib TexCoord;
 
