@@ -21,6 +21,7 @@ CombineProgram::CombineProgram() {
         "uniform sampler2D id_tex; \n"
         "uniform sampler2D gradient_tex; \n"
         "uniform sampler2D gradient_toon_tex; \n"
+        "uniform sampler2D line_tex; \n"
         "uniform sampler2D surface_tex; \n"
         "layout (std430, binding=0) buffer nbuffer{ uint n_sum[]; }; \n"
 		"layout(location=0) out vec4 combine_out;\n"
@@ -43,8 +44,11 @@ CombineProgram::CombineProgram() {
 
         "   vec4 gradient = texelFetch(gradient_tex, shifted_coord, 0); \n"
         "   vec4 gradient_toon = texelFetch(gradient_toon_tex, shifted_coord, 0); \n"
+        "   vec4 line = texelFetch(line_tex, shifted_coord, 0); \n"
+
         "   vec4 shaded = gradient; \n"
         "   if(gradient_toon.a>0.0) shaded = gradient_toon; \n"
+        "   if(line.a>0.0) shaded = line; \n"
 
         //paper granulation
         "   vec4 surface = texelFetch(surface_tex, shifted_coord, 0); \n"
@@ -61,7 +65,8 @@ CombineProgram::CombineProgram() {
     glUniform1i(glGetUniformLocation(program, "id_tex"), 0);
     glUniform1i(glGetUniformLocation(program, "gradient_tex"), 1);
     glUniform1i(glGetUniformLocation(program, "gradient_toon_tex"), 2);
-    glUniform1i(glGetUniformLocation(program, "surface_tex"), 3);
+    glUniform1i(glGetUniformLocation(program, "line_tex"), 3);
+    glUniform1i(glGetUniformLocation(program, "surface_tex"), 4);
     //TODO shadow lut
 
 	glUseProgram(0); //unbind program -- glUniform* calls refer to ??? now

@@ -112,6 +112,7 @@ GradientProgram::GradientProgram() {
         "layout(std430, binding=8) buffer nbuffer { uint ns[]; }; \n"
 		"layout(location=0) out vec4 gradient_out;\n"
 		"layout(location=1) out vec4 gradient_toon_out;\n"
+		"layout(location=2) out vec4 line_out;\n"
 
         "float unpack_float(uint v){ \n"
         "   return float(v)/4096.0; \n"
@@ -137,6 +138,15 @@ GradientProgram::GradientProgram() {
         "   return inverse(A)*RHS; \n"
         "} \n"
 
+        "bool boundaryCheck(ivec2 coord) { \n"
+        "   int id = 2*int(texelFetch(id_tex, coord, 0).r*255); \n"
+        "   int idl = 2*int(texelFetch(id_tex, coord+ivec2(-1, 0), 0).r*255); \n"
+        "   int idr = 2*int(texelFetch(id_tex, coord+ivec2(1, 0), 0).r*255); \n"
+        "   int idu = 2*int(texelFetch(id_tex, coord+ivec2(0, 1), 0).r*255); \n"
+        "   int idd = 2*int(texelFetch(id_tex, coord+ivec2(0, -1), 0).r*255); \n"
+        "   return !(id==idl && id==idr && id==idu && id==idd);"
+        "} \n"
+
 		"void main() {\n"
         "   ivec2 coord = ivec2(gl_FragCoord.xy); \n"
         "   vec2 eqR = calculate_eq(0, 0); \n"
@@ -159,6 +169,12 @@ GradientProgram::GradientProgram() {
         "       gradient_toon_out = vec4(gradient_valR, gradient_valG, gradient_valB, 1.0); \n"
         "   } else { \n"
         "       gradient_toon_out = vec4(0.0); \n"
+        "   } \n"
+
+        "   if(boundaryCheck(coord)){ \n"
+        "       line_out = vec4(0.0, 0.0, 0.0, 1.0);"
+        "   } else { \n"
+        "       line_out = vec4(0.0); \n"
         "   } \n"
 		"}\n"
 	);

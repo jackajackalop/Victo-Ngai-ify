@@ -2,7 +2,6 @@
 #include "Mode.hpp"
 
 //Starting mode:
-#include "demo_menu.hpp"
 #include "PlantMode.hpp"
 
 //Deal with calling resource loading functions:
@@ -188,7 +187,7 @@ int main(int argc, char **argv) {
 		}
 
 		{ //(3) call the current mode's "draw" function to produce output:
-		
+
 			Mode::current->draw(drawable_size);
 		}
 

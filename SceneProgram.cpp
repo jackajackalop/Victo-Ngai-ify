@@ -61,9 +61,11 @@ SceneProgram::SceneProgram() {
 		"layout(location=0) out vec4 basic_out;\n"
 		"layout(location=1) out vec4 color_out;\n"
         "layout(location=2) out vec4 id_out; \n"
-        "layout(location=3) out vec4 toon_out; \n"
+        "layout(location=3) out vec4 normal_out; \n"
+        "layout(location=4) out vec4 toon_out; \n"
 
 		"void main() {\n"
+        "   normal_out = vec4(normal, 1.0); \n"
         "   float id_color = float(id)/255.0; \n"
         "   id_out = vec4(id_color, id_color, id_color, 1.0); \n"
 		"	vec3 n = normalize(normal);\n"
