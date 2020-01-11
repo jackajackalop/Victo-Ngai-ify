@@ -30,6 +30,7 @@ struct PlantMode : public Mode {
     void cpu_gradient(GLuint basic_tex, GLuint color_tex, GLuint id_tex);
 	void draw_gradients_linfit(GLuint basic_tex, GLuint color_tex,
                         GLuint toon_tex, GLuint id_tex, GLuint normal_tex,
+                        GLuint depth_tex,
                         GLuint *gradient_tex_, GLuint *gradient_toon_tex_,
                         GLuint *line_tex);
     void draw_gradients_cpu(GLuint basic_tex, GLuint color_tex,

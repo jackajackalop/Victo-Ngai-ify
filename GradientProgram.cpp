@@ -100,6 +100,7 @@ GradientProgram::GradientProgram() {
         "uniform sampler2D toon_tex; \n"
         "uniform sampler2D id_tex; \n"
         "uniform sampler2D normal_tex; \n"
+        "uniform sampler2D depth_tex; \n"
         "uniform int width; \n"
         "uniform int height; \n"
         "layout(std430, binding=0) buffer xbuffer { uint wsums_packed[]; }; \n"
@@ -148,18 +149,29 @@ GradientProgram::GradientProgram() {
         "   return !(id==idl && id==idr && id==idu && id==idd);"
         "} \n"
 
+        //referenced this https://roystan.net/articles/outline-shader.html
+        "bool depthCheck(ivec2 coord){ \n"
+        "   float threshold = 0.001; \n"
+        "   float d0 = texelFetch(depth_tex, coord+ivec2(1, -1), 0).r; \n"
+        "   float d1 = texelFetch(depth_tex, coord+ivec2(1, 1), 0).r; \n"
+        "   float d2 = texelFetch(depth_tex, coord+ivec2(-1, -1), 0).r; \n"
+        "   float d3 = texelFetch(depth_tex, coord+ivec2(-1, 1), 0).r; \n"
+        "   float ddif0 = d1-d0; \n"
+        "   float ddif1 = d3-d2; \n"
+        "   float edged = sqrt(ddif0*ddif0 + ddif1*ddif1)*100; \n"
+        "   return edged>threshold;"
+        "} \n"
+
         "bool normalCheck(ivec2 coord) { \n"
-        "   float threshold = -0.0000000001; \n"
-        "   vec3 n = texelFetch(normal_tex, coord, 0).xyz; \n"
-        "   vec3 nl = texelFetch(normal_tex, coord+ivec2(-1, 0), 0).xyz; \n"
-        "   vec3 nr = texelFetch(normal_tex, coord+ivec2(1, 0), 0).xyz; \n"
-        "   vec3 nu = texelFetch(normal_tex, coord+ivec2(0, 1), 0).xyz; \n"
-        "   vec3 nd = texelFetch(normal_tex, coord+ivec2(0, -1), 0).xyz; \n"
-        "   float dl = dot(n, nl); \n"
-        "   float dr = dot(n, nr); \n"
-        "   float du = dot(n, nu); \n"
-        "   float dd = dot(n, nd); \n"
-        "   return !(dl>threshold && dr>threshold && du>threshold && dd>threshold);"
+        "   float threshold = 0.3; \n"
+        "   vec3 n0 = texelFetch(normal_tex, coord+ivec2(1, -1), 0).xyz; \n"
+        "   vec3 n1 = texelFetch(normal_tex, coord+ivec2(1, 1), 0).xyz; \n"
+        "   vec3 n2 = texelFetch(normal_tex, coord+ivec2(-1, -1), 0).xyz; \n"
+        "   vec3 n3 = texelFetch(normal_tex, coord+ivec2(-1, 1), 0).xyz; \n"
+        "   vec3 ndif0 = n1-n0; \n"
+        "   vec3 ndif1 = n3-n2; \n"
+        "   float edgen = sqrt(dot(ndif0, ndif0) + dot(ndif1, ndif1)); \n"
+        "   return edgen>threshold;"
         "} \n"
 
 		"void main() {\n"
@@ -186,7 +198,7 @@ GradientProgram::GradientProgram() {
         "       gradient_toon_out = vec4(0.0); \n"
         "   } \n"
 
-        "   if(boundaryCheck(coord) || normalCheck(coord)){ \n"
+        "   if(boundaryCheck(coord)||normalCheck(coord)||depthCheck(coord)){ \n"
         "       line_out = vec4(0.0, 0.0, 0.0, 1.0);"
         "   } else { \n"
         "       line_out = vec4(0.0); \n"
@@ -202,6 +214,7 @@ GradientProgram::GradientProgram() {
     glUniform1i(glGetUniformLocation(program, "toon_tex"), 1);
     glUniform1i(glGetUniformLocation(program, "id_tex"), 2);
     glUniform1i(glGetUniformLocation(program, "normal_tex"), 3);
+    glUniform1i(glGetUniformLocation(program, "depth_tex"), 4);
 
 
 	glUseProgram(0); //unbind program -- glUniform* calls refer to ??? now
