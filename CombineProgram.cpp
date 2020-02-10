@@ -23,6 +23,7 @@ CombineProgram::CombineProgram() {
         "uniform sampler2D gradient_toon_tex; \n"
         "uniform sampler2D line_tex; \n"
         "uniform sampler2D surface_tex; \n"
+        "uniform sampler2D vignette_tex; \n"
         "layout (std430, binding=0) buffer nbuffer{ uint n_sum[]; }; \n"
 		"layout(location=0) out vec4 combine_out;\n"
 
@@ -57,7 +58,15 @@ CombineProgram::CombineProgram() {
         "   float density_amt = 0.5; \n"
         "   vec4 powed = pow_col(shaded, 1.0+density_amt*Piv); \n"
         "   vec4 granulated = shaded*(shaded-density_amt*Piv)+(1.0-shaded)*powed; \n"
+
+        //vignette
         "   combine_out = granulated; \n"
+        "   vec2 tex_coord = gl_FragCoord.xy/textureSize(surface_tex, 0); \n"
+        "   vec4 vignette = texture(vignette_tex, tex_coord); \n"
+        "   combine_out = vignette*vignette.a+granulated*(1.0-vignette.a); \n"
+     //   "   combine_out = vignette; \n"
+      //  "if(vignette.r>0) combine_out = vec4(1,0,0,1);"
+       // "   combine_out.a = 1.0; \n"
 		"}\n"
 	);
 	glUseProgram(program); //bind program -- glUniform* calls refer to this program now
@@ -67,6 +76,7 @@ CombineProgram::CombineProgram() {
     glUniform1i(glGetUniformLocation(program, "gradient_toon_tex"), 2);
     glUniform1i(glGetUniformLocation(program, "line_tex"), 3);
     glUniform1i(glGetUniformLocation(program, "surface_tex"), 4);
+    glUniform1i(glGetUniformLocation(program, "vignette_tex"), 5);
     //TODO shadow lut
 
 	glUseProgram(0); //unbind program -- glUniform* calls refer to ??? now

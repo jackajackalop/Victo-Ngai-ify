@@ -56,7 +56,7 @@ GLuint load_texture(std::string const &filename) {
 	GLuint tex = 0;
 	glGenTextures(1, &tex);
 	glBindTexture(GL_TEXTURE_2D, tex);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, size.x, size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, data.data());
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, size.x, size.y, 0, GL_RGBA, GL_UNSIGNED_BYTE, data.data());
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
@@ -143,8 +143,13 @@ static Load< GLuint > shadow_lut_tex(LoadTagDefault, []() -> GLuint const *{
 static Load< GLuint > line_lut_tex(LoadTagDefault, []() -> GLuint const *{
         return new GLuint(load_LUT(data_path("line_lut.cube")));
         });
+
 static Load< GLuint > paper_tex(LoadTagDefault, [](){
         return new GLuint (load_texture(data_path("textures/paper.png")));
+        });
+
+static Load< GLuint > vignette_tex(LoadTagDefault, [](){
+        return new GLuint (load_texture(data_path("textures/vignette.png")));
         });
 
 static Load< Scene > scene(LoadTagLate, []() -> Scene const * {
@@ -742,6 +747,8 @@ void PlantMode::draw_combine(GLuint id_tex, GLuint gradient_tex,
     glBindTexture(GL_TEXTURE_2D, line_tex);
     glActiveTexture(GL_TEXTURE4);
     glBindTexture(GL_TEXTURE_2D, surface_tex);
+    glActiveTexture(GL_TEXTURE5);
+    glBindTexture(GL_TEXTURE_2D, *vignette_tex);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, n_ssbo);
 
     glUseProgram(combine_program->program);
