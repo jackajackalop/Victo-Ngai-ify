@@ -83,7 +83,7 @@ SceneProgram::SceneProgram() {
 
         //shadow calculations
 		"	float shadow = textureProj(shadow_depth_tex, shadowCoord);\n"
-//		"	light += nl*shadow;\n"
+		//"	light += nl*shadow;\n"
 
 		"	basic_out = vec4(light*albedo.rgb, albedo.a);\n"
         "   color_out = basic_out; \n"

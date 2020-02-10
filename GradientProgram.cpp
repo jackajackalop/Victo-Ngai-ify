@@ -101,6 +101,8 @@ GradientProgram::GradientProgram() {
         "uniform sampler2D id_tex; \n"
         "uniform sampler2D normal_tex; \n"
         "uniform sampler2D depth_tex; \n"
+        "uniform sampler3D line_lut_tex; \n"
+        "uniform int lut_size; \n"
         "uniform int width; \n"
         "uniform int height; \n"
         "layout(std430, binding=0) buffer xbuffer { uint wsums_packed[]; }; \n"
@@ -199,7 +201,11 @@ GradientProgram::GradientProgram() {
         "   } \n"
 
         "   if(boundaryCheck(coord)||normalCheck(coord)||depthCheck(coord)){ \n"
-        "       line_out = vec4(0.0, 0.0, 0.0, 1.0);"
+        "       vec3 scale = vec3(lut_size - 1.0)/lut_size; \n"
+        "       vec3 offset = vec3(1.0/(2.0*lut_size)); \n"
+        "       vec4 base_color = texelFetch(color_tex, coord, 0); \n"
+        "       vec3 line_color = texture(line_lut_tex, scale*base_color.rgb+offset).rgb; \n"
+        "       line_out = vec4(line_color, 1.0);"
         "   } else { \n"
         "       line_out = vec4(0.0); \n"
         "   } \n"
@@ -209,12 +215,14 @@ GradientProgram::GradientProgram() {
 
     width = glGetUniformLocation(program, "width");
     height = glGetUniformLocation(program, "height");
+    lut_size = glGetUniformLocation(program, "lut_size");
 
     glUniform1i(glGetUniformLocation(program, "color_tex"), 0);
     glUniform1i(glGetUniformLocation(program, "toon_tex"), 1);
     glUniform1i(glGetUniformLocation(program, "id_tex"), 2);
     glUniform1i(glGetUniformLocation(program, "normal_tex"), 3);
     glUniform1i(glGetUniformLocation(program, "depth_tex"), 4);
+    glUniform1i(glGetUniformLocation(program, "line_lut_tex"), 5);
 
 
 	glUseProgram(0); //unbind program -- glUniform* calls refer to ??? now

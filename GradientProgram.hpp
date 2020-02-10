@@ -22,6 +22,7 @@ struct GradientProgram {
 
     GLuint width = -1U;
     GLuint height = -1U;
+    GLuint lut_size = -1U;
 };
 
 extern Load< CalculateGradientProgram > calculate_gradient_program;

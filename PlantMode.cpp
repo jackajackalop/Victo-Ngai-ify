@@ -133,13 +133,16 @@ static Load< MeshBuffer > meshes(LoadTagDefault, []() -> MeshBuffer const * {
 
 GLuint load_LUT(std::string const &filename);
 static Load< GLuint > lut_tex(LoadTagDefault, []() -> GLuint const *{
-        return new GLuint(load_LUT(data_path("lut.cube")));
+        return new GLuint(load_LUT(data_path("lut-fixed.cube")));
         });
 
 static Load< GLuint > shadow_lut_tex(LoadTagDefault, []() -> GLuint const *{
         return new GLuint(load_LUT(data_path("shadow_lut.cube")));
         });
 
+static Load< GLuint > line_lut_tex(LoadTagDefault, []() -> GLuint const *{
+        return new GLuint(load_LUT(data_path("line_lut.cube")));
+        });
 static Load< GLuint > paper_tex(LoadTagDefault, [](){
         return new GLuint (load_texture(data_path("textures/paper.png")));
         });
@@ -545,8 +548,8 @@ void PlantMode::cpu_gradient(GLuint basic_tex, GLuint color_tex,
             //gradient_val = abs(glm::determinant(A));
             if(x==200 && y==200){
 //                std::cout<<glm::to_string(A[0])<<"\n"<<glm::to_string(A[1])<<"\n"<<glm::to_string(A[2])<<" "<<gradient_val<<std::endl;
-                std::cout<<gradient_val<<std::endl;
-                std::cout<<glm::to_string((A*soln-RHS)/RHS)<<"\n"<<std::endl;
+               // std::cout<<gradient_val<<std::endl;
+               // std::cout<<glm::to_string((A*soln-RHS)/RHS)<<"\n"<<std::endl;
             }
 //            gradient_val = soln2.x*x+soln2.y;
             float output = gradient_val-value;
@@ -690,10 +693,13 @@ void PlantMode::draw_gradients_linfit(GLuint basic_tex, GLuint color_tex,
     glBindTexture(GL_TEXTURE_2D, normal_tex);
     glActiveTexture(GL_TEXTURE4);
     glBindTexture(GL_TEXTURE_2D, depth_tex);
+    glActiveTexture(GL_TEXTURE5);
+    glBindTexture(GL_TEXTURE_3D, *line_lut_tex);
 
     glUseProgram(gradient_program->program);
     glUniform1i(gradient_program->width, textures.size.x);
     glUniform1i(gradient_program->height, textures.size.y);
+    glUniform1i(gradient_program->lut_size, lut_size);
     glDrawArrays(GL_TRIANGLES, 0, 3);
 
     GL_ERRORS();
