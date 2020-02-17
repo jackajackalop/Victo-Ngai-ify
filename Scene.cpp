@@ -64,6 +64,10 @@ glm::mat4 Scene::Transform::make_world_to_local() const {
 
 //-------------------------
 
+glm::mat4 Scene::Light::make_projection() const {
+    return glm::perspective( spot_fov, 1.0f, aspect, near );
+}
+
 glm::mat4 Scene::Camera::make_projection() const {
     return glm::infinitePerspective( fovy, aspect, near );
 }

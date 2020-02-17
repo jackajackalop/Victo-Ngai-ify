@@ -45,6 +45,7 @@ GLuint n_ssbo;
 GLuint meshes_for_scene_program = 0;
 Scene::Transform *camera_parent_transform = nullptr;
 Scene::Camera *camera = nullptr;
+Scene::Light *spot = nullptr;
 glm::vec2 camera_spin = glm::vec2(0.0f, 0.0f);
 glm::vec3 camera_shift = glm::vec3(0.0f, 0.0f, 0.0f);
 
@@ -152,6 +153,10 @@ static Load< GLuint > vignette_tex(LoadTagDefault, [](){
         return new GLuint (load_texture(data_path("textures/vignette.png")));
         });
 
+static Load< GLuint > detail_tex(LoadTagDefault, [](){
+        return new GLuint (load_texture(data_path("textures/wood.png")));
+        });
+
 static Load< Scene > scene(LoadTagLate, []() -> Scene const * {
         Scene *ret = new Scene();
         ret->load(data_path("rat_girl.scene"), [](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
@@ -184,6 +189,15 @@ static Load< Scene > scene(LoadTagLate, []() -> Scene const * {
             }
         }
         if (!camera) throw std::runtime_error("No 'Camera' camera in scene.");
+
+        //look up the spot:
+        for (auto c = ret->lights.begin(); c != ret->lights.end(); ++c) {
+            if (c->transform->name == "Spot") {
+                if (spot) throw std::runtime_error("Multiple 'Spot' objects in scene.");
+                spot = &(*c);
+            }
+        }
+        if (!spot) throw std::runtime_error("No 'Spot' in scene.");
 
         return ret;
 });
@@ -402,7 +416,11 @@ void PlantMode::draw_scene(GLuint shadow_depth_tex, GLuint *basic_tex_,
     glUniform3fv(scene_program->sun_direction, 1, glm::value_ptr(sun_dir));
     glUniform1i(scene_program->lut_size, lut_size);
 
-
+    glm::vec3 scale = spot->transform->scale;
+    glm::vec3 inv_scale;
+    inv_scale.x = (scale.x == 0.0f ? 0.0f : 1.0f / scale.x);
+    inv_scale.y = (scale.y == 0.0f ? 0.0f : 1.0f / scale.y);
+    inv_scale.z = (scale.z == 0.0f ? 0.0f : 1.0f / scale.z);
 	glm::mat4 world_to_spot =
 		//This matrix converts from the spotlight's clip space ([-1,1]^3) into depth map texture coordinates ([0,1]^2) and depth map Z values ([0,1]):
 		glm::mat4(
@@ -412,7 +430,19 @@ void PlantMode::draw_scene(GLuint shadow_depth_tex, GLuint *basic_tex_,
 			0.5f, 0.5f, 0.5f+0.00001f /* <-- bias */, 1.0f
 		)
 		//this is the world-to-clip matrix used when rendering the shadow map:
-		* light_mat * make_light_to_local(light_rotation);
+        * spot->make_projection()
+        * glm::mat4(glm::inverse(spot->transform->rotation))
+        *glm::mat4( //un-scale
+            glm::vec4(inv_scale.x, 0.0f, 0.0f, 0.0f),
+            glm::vec4(0.0f, inv_scale.y, 0.0f, 0.0f),
+            glm::vec4(0.0f, 0.0f, inv_scale.z, 0.0f),
+            glm::vec4(0.0f, 0.0f, 0.0f, 1.0f))
+	    * glm::mat4( //un-translate
+		    glm::vec4(1.0f, 0.0f, 0.0f, 0.0f),
+    		glm::vec4(0.0f, 1.0f, 0.0f, 0.0f),
+	    	glm::vec4(0.0f, 0.0f, 1.0f, 0.0f),
+		    glm::vec4(-spot->transform->position, 1.0f)
+            );
     glUniformMatrix4fv(scene_program->LIGHT_TO_SPOT, 1, GL_FALSE,
             glm::value_ptr(world_to_spot));
     scene->draw(*camera);
@@ -749,6 +779,8 @@ void PlantMode::draw_combine(GLuint id_tex, GLuint gradient_tex,
     glBindTexture(GL_TEXTURE_2D, surface_tex);
     glActiveTexture(GL_TEXTURE5);
     glBindTexture(GL_TEXTURE_2D, *vignette_tex);
+    glActiveTexture(GL_TEXTURE6);
+    glBindTexture(GL_TEXTURE_2D, *detail_tex);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, n_ssbo);
 
     glUseProgram(combine_program->program);

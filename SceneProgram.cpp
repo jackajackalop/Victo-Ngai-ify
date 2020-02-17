@@ -73,19 +73,23 @@ SceneProgram::SceneProgram() {
         "   float id_color = float(id)/255.0; \n"
         "   id_out = vec4(id_color, id_color, id_color, 1.0); \n"
 		"	vec3 n = normalize(shadingNormal);\n"
-        "   vec3 l = sun_direction; \n"
 		"	vec4 albedo = color;\n"
+	//	"	vec3 light = mix(vec3(0.0,0.0,0.1), vec3(1.0,1.0,0.95), nl*0.5+0.5);\n"
+        "   vec3 light = vec3(0.0, 0.0, 0.0); \n"
+        "   float nl = 0.0; \n"
 
-		//simple hemispherical lighting model:
-		"	float nl = max(0.0, dot(n,l));\n"
-		"	vec3 light = mix(vec3(0.0,0.0,0.1), vec3(1.0,1.0,0.95), nl*0.5+0.5);\n"
-//        "   light *= vec3(0.2, 0.2, 0.2); \n"
 
-        //shadow calculations
-		"	float shadow = textureProj(shadow_depth_tex, shadowCoord);\n"
-		//"	light += nl*shadow;\n"
+        "   { \n"
+        "       vec3 l = sun_direction; \n"
+		"	    nl = max(0.0, dot(n,l));\n"
+		"   	float shadow = textureProj(shadow_depth_tex, shadowCoord);\n"
+	//	"	    light += nl*shadow;\n"
+		"	    light = mix(vec3(0.0,0.0,0.1), vec3(1.0,1.0,0.95), nl*0.5+0.5);\n"
+//        "       color_out = vec4(shadow, shadow, shadow, 1.0); \n"
+  //      "       color_out = vec4(light, 1.0); \n"
+        "   } \n"
 
-		"	basic_out = vec4(light*albedo.rgb, albedo.a);\n"
+		"	basic_out = vec4(albedo.rgb*light, albedo.a);\n"
         "   color_out = basic_out; \n"
         "   vec3 scale = vec3(lut_size - 1.0)/lut_size; \n"
         "   vec3 offset = vec3(1.0/(2.0*lut_size)); \n"
