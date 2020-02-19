@@ -51,6 +51,7 @@ SceneProgram::SceneProgram() {
 		//fragment shader:
 		"#version 330\n"
         "uniform sampler2DShadow shadow_depth_tex; \n"
+        "uniform sampler2D shadow_tex; \n"
         "uniform sampler3D lut_tex; \n"
         "uniform sampler3D shadow_lut_tex; \n"
         "uniform int lut_size; \n"
@@ -83,9 +84,10 @@ SceneProgram::SceneProgram() {
         "       vec3 l = sun_direction; \n"
 		"	    nl = max(0.0, dot(n,l));\n"
 		"   	float shadow = textureProj(shadow_depth_tex, shadowCoord);\n"
-	//	"	    light += nl*shadow;\n"
-		"	    light = mix(vec3(0.0,0.0,0.1), vec3(1.0,1.0,0.95), nl*0.5+0.5);\n"
-//        "       color_out = vec4(shadow, shadow, shadow, 1.0); \n"
+		"	    light += nl*shadow;\n"
+	//	"	    light = mix(vec3(0.0,0.0,0.1), vec3(1.0,1.0,0.95), nl*0.5+0.5);\n"
+     //   "       color_out = vec4(shadow, shadow, shadow, 1.0); \n"
+        //used this http://glampert.com/2014/01-26/visualizing-the-depth-buffer/
   //      "       color_out = vec4(light, 1.0); \n"
         "   } \n"
 
@@ -125,6 +127,7 @@ SceneProgram::SceneProgram() {
 	glUseProgram(program); //bind program -- glUniform* calls refer to this program now
 
 	glUniform1i(glGetUniformLocation(program, "shadow_depth_tex"), 0);
+	glUniform1i(glGetUniformLocation(program, "shadow_tex"), 0);
 	glUniform1i(glGetUniformLocation(program, "lut_tex"), 1);
 	glUniform1i(glGetUniformLocation(program, "shadow_lut_tex"), 2);
 

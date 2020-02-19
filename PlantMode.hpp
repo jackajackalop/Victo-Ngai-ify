@@ -40,6 +40,7 @@ struct PlantMode : public Mode {
             GLuint *shaded_tex_);
 	//paper textures
 	void draw_surface(GLuint paper_tex, GLuint *surface_tex_);
+	void draw_shadow_debug(GLuint shadow_depth_tex, GLuint *shadow_tex_);
 	//screen tones in shadows
 	void draw_screentones();
 	//lineart

@@ -29,12 +29,11 @@
 
 enum Stages {
     BASIC = 0,
-    FLATS = 1,
-    GRADIENTS_BLUR = 2,
-    GRADIENTS_LINFIT = 3,
-    SHADOWS = 4,
+    SHADOWS = 1,
+    SURFACE = 2,
+    FLATS = 3,
+    GRADIENTS_LINFIT = 4,
     SHADED = 5,
-    SURFACE = 6
 };
 
 int show = 1;
@@ -127,7 +126,7 @@ GLuint load_LUT(std::string const &filename) {
 }
 
 static Load< MeshBuffer > meshes(LoadTagDefault, []() -> MeshBuffer const * {
-        MeshBuffer *ret = new MeshBuffer(data_path("rat_girl.pnct"));
+        MeshBuffer *ret = new MeshBuffer(data_path("vignette.pnct"));
         meshes_for_scene_program = ret->make_vao_for_program(scene_program->program);
         return ret;
         });
@@ -159,7 +158,7 @@ static Load< GLuint > detail_tex(LoadTagDefault, [](){
 
 static Load< Scene > scene(LoadTagLate, []() -> Scene const * {
         Scene *ret = new Scene();
-        ret->load(data_path("rat_girl.scene"), [](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
+        ret->load(data_path("vignette.scene"), [](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
                 auto &mesh = meshes->lookup(mesh_name);
                 scene.drawables.emplace_back(transform);
                 Scene::Drawable::Pipeline &pipeline = scene.drawables.back().pipeline;
@@ -239,15 +238,15 @@ bool PlantMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size
     if(evt.type == SDL_KEYDOWN){
         if(evt.key.keysym.scancode == SDL_SCANCODE_0){
             show = BASIC;
-        }else if(evt.key.keysym.scancode == SDL_SCANCODE_1){
-            show = FLATS;
-        }else if(evt.key.keysym.scancode == SDL_SCANCODE_2){
-            show = GRADIENTS_BLUR;
         }else if(evt.key.keysym.scancode == SDL_SCANCODE_3){
-            show = GRADIENTS_LINFIT;
+            show = FLATS;
         }else if(evt.key.keysym.scancode == SDL_SCANCODE_4){
-            show = SHADED;
+            show = GRADIENTS_LINFIT;
+        }else if(evt.key.keysym.scancode == SDL_SCANCODE_1){
+            show = SHADOWS;
         }else if(evt.key.keysym.scancode == SDL_SCANCODE_5){
+            show = SHADED;
+        }else if(evt.key.keysym.scancode == SDL_SCANCODE_2){
             show = SURFACE;
         }
     }
@@ -276,9 +275,11 @@ struct Textures {
     GLuint line_tex = 0;
     GLuint shaded_tex = 0;
     GLuint surface_tex = 0;
+    GLuint shadow_tex = 0;
 
 	GLuint depth_tex = 0;
 	GLuint shadow_depth_tex = 0;
+    glm::mat4 shadow_world_to_clip = glm::mat4(1.0);
 
     GLuint final_tex = 0;
     void allocate(glm::uvec2 const &new_size) {
@@ -288,7 +289,7 @@ struct Textures {
             size = new_size;
             surfaced = false;
 
-            auto alloc_tex = [this](GLuint *tex, GLint internalformat, GLint format){
+            auto alloc_tex = [this](GLuint *tex, GLint internalformat, GLint format, glm::uvec2 size){
                 if (*tex == 0) glGenTextures(1, tex);
                 glBindTexture(GL_TEXTURE_2D, *tex);
                 glTexImage2D(GL_TEXTURE_2D, 0, internalformat, size.x,
@@ -300,20 +301,21 @@ struct Textures {
                 glBindTexture(GL_TEXTURE_2D, 0);
             };
 
-            alloc_tex(&basic_tex, GL_RGBA8, GL_RGBA);
-            alloc_tex(&color_tex, GL_RGBA8, GL_RGBA);
-            alloc_tex(&id_tex, GL_RGBA8, GL_RGBA);
-            alloc_tex(&normal_tex, GL_RGBA8, GL_RGBA);
-            alloc_tex(&toon_tex, GL_RGBA8, GL_RGBA);
-            alloc_tex(&gradient_tex, GL_RGBA8, GL_RGBA);
-            alloc_tex(&gradient_toon_tex, GL_RGBA8, GL_RGBA);
-            alloc_tex(&line_tex, GL_RGBA8, GL_RGBA);
-            alloc_tex(&depth_tex, GL_DEPTH_COMPONENT24, GL_DEPTH_COMPONENT);
+            alloc_tex(&basic_tex, GL_RGBA8, GL_RGBA, size);
+            alloc_tex(&color_tex, GL_RGBA8, GL_RGBA, size);
+            alloc_tex(&id_tex, GL_RGBA8, GL_RGBA, size);
+            alloc_tex(&normal_tex, GL_RGBA8, GL_RGBA, size);
+            alloc_tex(&toon_tex, GL_RGBA8, GL_RGBA, size);
+            alloc_tex(&gradient_tex, GL_RGBA8, GL_RGBA, size);
+            alloc_tex(&gradient_toon_tex, GL_RGBA8, GL_RGBA, size);
+            alloc_tex(&line_tex, GL_RGBA8, GL_RGBA, size);
+            alloc_tex(&depth_tex, GL_DEPTH_COMPONENT24, GL_DEPTH_COMPONENT, size);
             alloc_tex(&shadow_depth_tex, GL_DEPTH_COMPONENT24,
-                    GL_DEPTH_COMPONENT);
-            alloc_tex(&shaded_tex, GL_RGBA8, GL_RGBA);
-            alloc_tex(&surface_tex, GL_RGBA8, GL_RGBA);
-            alloc_tex(&final_tex, GL_RGBA8, GL_RGBA);
+                    GL_DEPTH_COMPONENT, glm::uvec2(512, 512));
+            alloc_tex(&shaded_tex, GL_RGBA8, GL_RGBA, size);
+            alloc_tex(&shadow_tex, GL_RGBA8, GL_RGBA, size);
+            alloc_tex(&surface_tex, GL_RGBA8, GL_RGBA, size);
+            alloc_tex(&final_tex, GL_RGBA8, GL_RGBA, size);
             GL_ERRORS();
         }
 
@@ -332,9 +334,6 @@ void PlantMode::draw_shadows(GLuint *shadow_depth_tex_)
             shadow_depth_tex, 0);
     check_fb();
 
-    //Draw scene:
-    camera->aspect = textures.size.x / float(textures.size.y);
-
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -346,7 +345,27 @@ void PlantMode::draw_shadows(GLuint *shadow_depth_tex_)
     glEnable(GL_CULL_FACE);
     glCullFace(GL_FRONT);
 
-    scene->draw(*camera, true);
+    glm::vec3 scale = spot->transform->scale;
+    glm::vec3 inv_scale;
+    inv_scale.x = (scale.x == 0.0f ? 0.0f : 1.0f / scale.x);
+    inv_scale.y = (scale.y == 0.0f ? 0.0f : 1.0f / scale.y);
+    inv_scale.z = (scale.z == 0.0f ? 0.0f : 1.0f / scale.z);
+
+    textures.shadow_world_to_clip = spot->make_projection()
+        * glm::mat4(glm::inverse(spot->transform->rotation))
+        *glm::mat4( //un-scale
+            glm::vec4(inv_scale.x, 0.0f, 0.0f, 0.0f),
+            glm::vec4(0.0f, inv_scale.y, 0.0f, 0.0f),
+            glm::vec4(0.0f, 0.0f, inv_scale.z, 0.0f),
+            glm::vec4(0.0f, 0.0f, 0.0f, 1.0f))
+	    * glm::mat4( //un-translate
+		    glm::vec4(1.0f, 0.0f, 0.0f, 0.0f),
+    		glm::vec4(0.0f, 1.0f, 0.0f, 0.0f),
+	    	glm::vec4(0.0f, 0.0f, 1.0f, 0.0f),
+		    glm::vec4(-spot->transform->position, 1.0f)
+            );
+
+    scene->draw( textures.shadow_world_to_clip, glm::mat4(1.0), true);
     glBindVertexArray(empty_vao);
     GL_ERRORS();
 
@@ -418,10 +437,10 @@ void PlantMode::draw_scene(GLuint shadow_depth_tex, GLuint *basic_tex_,
 
     glm::vec3 scale = spot->transform->scale;
     glm::vec3 inv_scale;
-    inv_scale.x = (scale.x == 0.0f ? 0.0f : 1.0f / scale.x);
-    inv_scale.y = (scale.y == 0.0f ? 0.0f : 1.0f / scale.y);
-    inv_scale.z = (scale.z == 0.0f ? 0.0f : 1.0f / scale.z);
-	glm::mat4 world_to_spot =
+    inv_scale.x = (scale.x == 0.0f ? 0.0f : 10.0f / scale.x);
+    inv_scale.y = (scale.y == 0.0f ? 0.0f : 10.0f / scale.y);
+    inv_scale.z = (scale.z == 0.0f ? 0.0f : 10.0f / scale.z);
+	glm::mat4 world_to_shadow_texture =
 		//This matrix converts from the spotlight's clip space ([-1,1]^3) into depth map texture coordinates ([0,1]^2) and depth map Z values ([0,1]):
 		glm::mat4(
 			0.5f, 0.0f, 0.0f, 0.0f,
@@ -430,21 +449,9 @@ void PlantMode::draw_scene(GLuint shadow_depth_tex, GLuint *basic_tex_,
 			0.5f, 0.5f, 0.5f+0.00001f /* <-- bias */, 1.0f
 		)
 		//this is the world-to-clip matrix used when rendering the shadow map:
-        * spot->make_projection()
-        * glm::mat4(glm::inverse(spot->transform->rotation))
-        *glm::mat4( //un-scale
-            glm::vec4(inv_scale.x, 0.0f, 0.0f, 0.0f),
-            glm::vec4(0.0f, inv_scale.y, 0.0f, 0.0f),
-            glm::vec4(0.0f, 0.0f, inv_scale.z, 0.0f),
-            glm::vec4(0.0f, 0.0f, 0.0f, 1.0f))
-	    * glm::mat4( //un-translate
-		    glm::vec4(1.0f, 0.0f, 0.0f, 0.0f),
-    		glm::vec4(0.0f, 1.0f, 0.0f, 0.0f),
-	    	glm::vec4(0.0f, 0.0f, 1.0f, 0.0f),
-		    glm::vec4(-spot->transform->position, 1.0f)
-            );
+        * textures.shadow_world_to_clip;
     glUniformMatrix4fv(scene_program->LIGHT_TO_SPOT, 1, GL_FALSE,
-            glm::value_ptr(world_to_spot));
+            glm::value_ptr(world_to_shadow_texture));
     scene->draw(*camera);
     glBindVertexArray(empty_vao);
     GL_ERRORS();
@@ -793,6 +800,46 @@ void PlantMode::draw_combine(GLuint id_tex, GLuint gradient_tex,
 
 }
 
+void PlantMode::draw_shadow_debug(GLuint shadow_depth_tex, GLuint *shadow_tex_)
+{
+    assert(shadow_tex_);
+    auto &shadow_tex = *shadow_tex_;
+
+    static GLuint fb = 0;
+    if(fb==0) glGenFramebuffers(1, &fb);
+    glBindFramebuffer(GL_FRAMEBUFFER, fb);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+            shadow_tex, 0);
+    GLenum bufs[1] = {GL_COLOR_ATTACHMENT0};
+    glDrawBuffers(1, bufs);
+    check_fb();
+
+    //Draw scene:
+    glBindFramebuffer(GL_FRAMEBUFFER, fb);
+    glViewport(0, 0, textures.size.x, textures.size.y);
+    camera->aspect = textures.size.x / float(textures.size.y);
+
+    GLfloat black[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+    glClearBufferfv(GL_COLOR, 0, black);
+
+    //set up basic OpenGL state:
+    glEnable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
+    glBlendEquation(GL_FUNC_ADD);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, shadow_depth_tex);
+
+    glUseProgram(shadow_debug_program->program);
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    GL_ERRORS();
+}
+
 void PlantMode::draw_surface(GLuint paper_tex, GLuint *surface_tex_)
 {
     assert(surface_tex_);
@@ -852,7 +899,7 @@ void PlantMode::draw_vignette(){
 void PlantMode::draw(glm::uvec2 const &drawable_size) {
     textures.allocate(drawable_size);
 
-    if(show >= GRADIENTS_LINFIT && !surfaced){
+    if(show >= SURFACE && !surfaced){
         draw_surface(*paper_tex, &textures.surface_tex);
         surfaced = true;
     }
@@ -860,10 +907,10 @@ void PlantMode::draw(glm::uvec2 const &drawable_size) {
     draw_scene(textures.shadow_depth_tex,
             &textures.basic_tex, &textures.color_tex, &textures.depth_tex,
             &textures.id_tex, &textures.normal_tex, &textures.toon_tex);
-    if(show == GRADIENTS_BLUR){
-        draw_gradients_cpu(textures.basic_tex, textures.color_tex,
-                textures.id_tex, &textures.gradient_tex);
-    }else if(show >= GRADIENTS_LINFIT){
+    if(show == SHADOWS) {
+        draw_shadow_debug(textures.shadow_depth_tex, &textures.shadow_tex);
+    }
+    if(show >= GRADIENTS_LINFIT){
         draw_gradients_linfit(textures.basic_tex, textures.color_tex,
                 textures.toon_tex, textures.id_tex, textures.normal_tex,
                 textures.depth_tex,
@@ -887,12 +934,14 @@ void PlantMode::draw(glm::uvec2 const &drawable_size) {
         glBindTexture(GL_TEXTURE_2D, textures.basic_tex);
     }else if(show == FLATS){
         glBindTexture(GL_TEXTURE_2D, textures.color_tex);
-    }else if(show == GRADIENTS_BLUR || show == GRADIENTS_LINFIT){
+    }else if(show == GRADIENTS_LINFIT){
         glBindTexture(GL_TEXTURE_2D, textures.gradient_tex);
     }else if(show == SHADED){
         glBindTexture(GL_TEXTURE_2D, textures.shaded_tex);
     }else if(show == SURFACE){
         glBindTexture(GL_TEXTURE_2D, textures.surface_tex);
+    }else if(show == SHADOWS){
+        glBindTexture(GL_TEXTURE_2D, textures.shadow_tex);
     }
 
     glDisable(GL_BLEND);
