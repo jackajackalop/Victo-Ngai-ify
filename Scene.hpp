@@ -115,7 +115,7 @@ struct Scene {
 		glm::vec3 energy = glm::vec3(1.0f);
 
 		//Spotlight specific:
-		float spot_fov = glm::radians(45.0f);
+		float fov = glm::radians(45.0f);
 
 		//near and far planes for shadow maps:
 		float aspect = 0.1f;

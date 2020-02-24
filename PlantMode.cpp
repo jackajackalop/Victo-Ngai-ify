@@ -36,7 +36,7 @@ enum Stages {
     SHADED = 5,
 };
 
-int show = 1;
+int show = 0;
 int lut_size = 64;
 bool surfaced = false;
 
@@ -311,7 +311,7 @@ struct Textures {
             alloc_tex(&line_tex, GL_RGBA8, GL_RGBA, size);
             alloc_tex(&depth_tex, GL_DEPTH_COMPONENT24, GL_DEPTH_COMPONENT, size);
             alloc_tex(&shadow_depth_tex, GL_DEPTH_COMPONENT24,
-                    GL_DEPTH_COMPONENT, glm::uvec2(512, 512));
+                    GL_DEPTH_COMPONENT, glm::uvec2(1024, 1024));
             alloc_tex(&shaded_tex, GL_RGBA8, GL_RGBA, size);
             alloc_tex(&shadow_tex, GL_RGBA8, GL_RGBA, size);
             alloc_tex(&surface_tex, GL_RGBA8, GL_RGBA, size);
@@ -345,26 +345,27 @@ void PlantMode::draw_shadows(GLuint *shadow_depth_tex_)
     glEnable(GL_CULL_FACE);
     glCullFace(GL_FRONT);
 
+/*
     glm::vec3 scale = spot->transform->scale;
-    glm::vec3 inv_scale;
+    glm::vec3 inv_scale =glm::vec3(1.0);
     inv_scale.x = (scale.x == 0.0f ? 0.0f : 1.0f / scale.x);
     inv_scale.y = (scale.y == 0.0f ? 0.0f : 1.0f / scale.y);
     inv_scale.z = (scale.z == 0.0f ? 0.0f : 1.0f / scale.z);
-
     textures.shadow_world_to_clip = spot->make_projection()
-        * glm::mat4(glm::inverse(spot->transform->rotation))
-        *glm::mat4( //un-scale
+        * glm::mat4( //un-scale
             glm::vec4(inv_scale.x, 0.0f, 0.0f, 0.0f),
             glm::vec4(0.0f, inv_scale.y, 0.0f, 0.0f),
             glm::vec4(0.0f, 0.0f, inv_scale.z, 0.0f),
             glm::vec4(0.0f, 0.0f, 0.0f, 1.0f))
+        * glm::mat4(glm::inverse(spot->transform->rotation))
 	    * glm::mat4( //un-translate
 		    glm::vec4(1.0f, 0.0f, 0.0f, 0.0f),
     		glm::vec4(0.0f, 1.0f, 0.0f, 0.0f),
 	    	glm::vec4(0.0f, 0.0f, 1.0f, 0.0f),
 		    glm::vec4(-spot->transform->position, 1.0f)
-            );
-
+            );*/
+    textures.shadow_world_to_clip = glm::mat4(2.280604, -0.235419, 0.313859, 0.313232, -0.036139, 2.271761, 0.338768, 0.338091, 0.791181, 0.782372, -0.889234, -0.887457, 0.959544, 1.502284, 9.052225, 9.233939);
+   // std::cout<<glm::to_string(textures.shadow_world_to_clip)<<std::endl;
     scene->draw( textures.shadow_world_to_clip, glm::mat4(1.0), true);
     glBindVertexArray(empty_vao);
     GL_ERRORS();
@@ -431,15 +432,11 @@ void PlantMode::draw_scene(GLuint shadow_depth_tex, GLuint *basic_tex_,
     glActiveTexture(GL_TEXTURE2);
     glBindTexture(GL_TEXTURE_3D, *shadow_lut_tex);
     glUseProgram(scene_program->program);
-    glm::vec3 sun_dir = light_rotation*glm::vec3(0.0, 0.0, 1.0);
-    glUniform3fv(scene_program->sun_direction, 1, glm::value_ptr(sun_dir));
+
+//    glm::mat4 spot_to_world = spot->transform->make_local_to_world();
+//    glUniform3fv(scene_program->spot_position, 1, glm::value_ptr(glm::vec3(spot_to_world[3])));
     glUniform1i(scene_program->lut_size, lut_size);
 
-    glm::vec3 scale = spot->transform->scale;
-    glm::vec3 inv_scale;
-    inv_scale.x = (scale.x == 0.0f ? 0.0f : 10.0f / scale.x);
-    inv_scale.y = (scale.y == 0.0f ? 0.0f : 10.0f / scale.y);
-    inv_scale.z = (scale.z == 0.0f ? 0.0f : 10.0f / scale.z);
 	glm::mat4 world_to_shadow_texture =
 		//This matrix converts from the spotlight's clip space ([-1,1]^3) into depth map texture coordinates ([0,1]^2) and depth map Z values ([0,1]):
 		glm::mat4(
@@ -450,6 +447,8 @@ void PlantMode::draw_scene(GLuint shadow_depth_tex, GLuint *basic_tex_,
 		)
 		//this is the world-to-clip matrix used when rendering the shadow map:
         * textures.shadow_world_to_clip;
+    textures.shadow_world_to_clip = glm::mat4(1.296918, 0.038906, 0.313548, 0.313232, 0.150976, 1.304926, 0.338433, 0.338091, -0.048138, -0.052543, -0.888354, -0.887457, 5.096742, 5.368112, 9.143174, 9.233940);
+//    std::cout<<glm::to_string(textures.shadow_world_to_clip)<<std::endl;
     glUniformMatrix4fv(scene_program->LIGHT_TO_SPOT, 1, GL_FALSE,
             glm::value_ptr(world_to_shadow_texture));
     scene->draw(*camera);

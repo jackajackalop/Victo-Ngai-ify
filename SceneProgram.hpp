@@ -23,7 +23,7 @@ struct SceneProgram {
 	GLuint OBJECT_TO_LIGHT_mat4x3 = -1U;
 	GLuint NORMAL_TO_LIGHT_mat3 = -1U;
 	GLuint LIGHT_TO_SPOT = -1U;
-	GLuint sun_direction = -1U;
+	GLuint spot_position = -1U;
     GLuint lut_size = -1U;
     GLuint id = -1U;
 };

@@ -6,6 +6,7 @@
 #include "read_write_chunk.hpp"
 
 #include <glm/gtc/type_ptr.hpp>
+#include <glm/gtx/string_cast.hpp>
 
 #include <fstream>
 
@@ -65,7 +66,8 @@ glm::mat4 Scene::Transform::make_world_to_local() const {
 //-------------------------
 
 glm::mat4 Scene::Light::make_projection() const {
-    return glm::perspective( spot_fov, 1.0f, aspect, near );
+    return glm::perspective( fov, 1.0f, aspect, near );
+//    return glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, aspect, near );
 }
 
 glm::mat4 Scene::Camera::make_projection() const {
@@ -306,7 +308,7 @@ void Scene::load(std::string const &filename,
         Light *light = &this->lights.back();
         light->type = static_cast<Light::Type>(l.type);
         light->energy = glm::vec3(l.color) / 255.0f * l.energy;
-        light->spot_fov = l.fov / 180.0f * 3.1415926f; //FOV is stored in degrees; convert to radians.
+        light->fov = l.fov / 180.0f * 3.1415926f; //FOV is stored in degrees; convert to radians.
     }
 
 
