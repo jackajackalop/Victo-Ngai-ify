@@ -54,7 +54,7 @@ SceneProgram::SceneProgram() {
         "uniform sampler3D lut_tex; \n"
         "uniform sampler3D shadow_lut_tex; \n"
         "uniform int lut_size; \n"
-//        "uniform vec3 spot_position; \n"
+        "uniform vec3 spot_position; \n"
         "uniform int id; \n"
 		"in vec3 position;\n"
 		"in vec3 geoNormal;\n"
@@ -79,16 +79,16 @@ SceneProgram::SceneProgram() {
 
 
         "   { \n"
-//        "       vec3 l = normalize(spot_position-position); \n"
-//		"	    nl = max(0.0, dot(n,l));\n"
+        "       vec3 l = normalize(spot_position-position); \n"
+		"	    nl = max(0.0, dot(n,l));\n"
 		"   	float shadow = textureProj(shadow_depth_tex, shadowCoord);\n"
-//		"	    light += nl*shadow;\n"
+		"	    light += nl*shadow;\n"
 		"	    light += shadow;\n"
-	//	"	    light = mix(vec3(0.0,0.0,0.1), vec3(1.0,1.0,0.95), nl*0.5+0.5);\n"
+		//"	    light = mix(vec3(0.0,0.0,0.1), vec3(1.0,1.0,0.95), nl*0.5+0.5);\n"
         "   basic_out = vec4(shadow, shadow, shadow, 1.0);"
         "   } \n"
 
-//		"	basic_out = vec4(albedo.rgb*light, albedo.a);\n"
+		"	basic_out = vec4(albedo.rgb*light, albedo.a);\n"
         "   color_out = basic_out; \n"
         "   vec3 scale = vec3(lut_size - 1.0)/lut_size; \n"
         "   vec3 offset = vec3(1.0/(2.0*lut_size)); \n"
@@ -116,7 +116,7 @@ SceneProgram::SceneProgram() {
 	OBJECT_TO_LIGHT_mat4x3 = glGetUniformLocation(program, "OBJECT_TO_LIGHT");
 	NORMAL_TO_LIGHT_mat3 = glGetUniformLocation(program, "NORMAL_TO_LIGHT");
 	LIGHT_TO_SPOT = glGetUniformLocation(program, "LIGHT_TO_SPOT");
-//	spot_position = glGetUniformLocation(program, "spot_position");
+	spot_position = glGetUniformLocation(program, "spot_position");
     lut_size = glGetUniformLocation(program, "lut_size");
     id = glGetUniformLocation(program, "id");
 
