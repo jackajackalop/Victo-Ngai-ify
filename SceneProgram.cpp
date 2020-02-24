@@ -83,7 +83,7 @@ SceneProgram::SceneProgram() {
 		"	    nl = max(0.0, dot(n,l));\n"
 		"   	float shadow = textureProj(shadow_depth_tex, shadowCoord);\n"
 		"	    light += nl*shadow;\n"
-		"	    light += shadow;\n"
+	//	"	    light += shadow;\n"
 		//"	    light = mix(vec3(0.0,0.0,0.1), vec3(1.0,1.0,0.95), nl*0.5+0.5);\n"
         "   basic_out = vec4(shadow, shadow, shadow, 1.0);"
         "   } \n"

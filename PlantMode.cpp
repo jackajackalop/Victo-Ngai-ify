@@ -126,7 +126,7 @@ GLuint load_LUT(std::string const &filename) {
 }
 
 static Load< MeshBuffer > meshes(LoadTagDefault, []() -> MeshBuffer const * {
-        MeshBuffer *ret = new MeshBuffer(data_path("vignette.pnct"));
+        MeshBuffer *ret = new MeshBuffer(data_path("rat_girl.pnct"));
         meshes_for_scene_program = ret->make_vao_for_program(scene_program->program);
         return ret;
         });
@@ -158,7 +158,7 @@ static Load< GLuint > detail_tex(LoadTagDefault, [](){
 
 static Load< Scene > scene(LoadTagLate, []() -> Scene const * {
         Scene *ret = new Scene();
-        ret->load(data_path("vignette.scene"), [](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
+        ret->load(data_path("rat_girl.scene"), [](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
                 auto &mesh = meshes->lookup(mesh_name);
                 scene.drawables.emplace_back(transform);
                 Scene::Drawable::Pipeline &pipeline = scene.drawables.back().pipeline;
@@ -279,7 +279,7 @@ struct Textures {
 
 	GLuint depth_tex = 0;
 	GLuint shadow_depth_tex = 0;
-	glm::uvec2 shadow_size = glm::uvec2(512, 512);
+	glm::uvec2 shadow_size = glm::uvec2(2048, 2048);
     glm::mat4 shadow_world_to_clip = glm::mat4(1.0);
 
     GLuint final_tex = 0;
@@ -365,6 +365,7 @@ void PlantMode::draw_shadows(GLuint *shadow_depth_tex_)
 	    	glm::vec4(0.0f, 0.0f, 1.0f, 0.0f),
 		    glm::vec4(-spot->transform->position, 1.0f)
             );
+//    std::cout<<glm::to_string(glm::inverse(textures.shadow_world_to_clip))<<std::endl;
     scene->draw( textures.shadow_world_to_clip, glm::mat4(1.0), true);
     glBindVertexArray(empty_vao);
     GL_ERRORS();
@@ -442,7 +443,7 @@ void PlantMode::draw_scene(GLuint shadow_depth_tex, GLuint *basic_tex_,
 			0.5f, 0.0f, 0.0f, 0.0f,
 			0.0f, 0.5f, 0.0f, 0.0f,
 			0.0f, 0.0f, 0.5f, 0.0f,
-			0.5f, 0.5f, 0.5f+0.00001f /* <-- bias */, 1.0f
+			0.5f, 0.5f, 0.5f-1e-5f /* <-- bias */, 1.0f
 		)
 		//this is the world-to-clip matrix used when rendering the shadow map:
         * textures.shadow_world_to_clip;

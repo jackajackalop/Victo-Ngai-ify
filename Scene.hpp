@@ -118,8 +118,9 @@ struct Scene {
 		float fov = glm::radians(45.0f);
 
 		//near and far planes for shadow maps:
-		float aspect = 0.1f;
-		float near = 100.0f;
+		float aspect = 1.0f;
+		float near = 7.0f;
+		float far = 30.0f;
 
 		//computed from the above:
 		glm::mat4 make_projection() const;

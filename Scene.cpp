@@ -66,7 +66,7 @@ glm::mat4 Scene::Transform::make_world_to_local() const {
 //-------------------------
 
 glm::mat4 Scene::Light::make_projection() const {
-    return glm::perspective( fov, 1.0f, aspect, near );
+    return glm::perspective( fov, aspect, near, far);
 //    return glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, aspect, near );
 }
 
