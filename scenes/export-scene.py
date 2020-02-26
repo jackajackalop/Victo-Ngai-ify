@@ -72,21 +72,41 @@ def write_string(string):
 	end = len(strings_data)
 	return struct.pack('II', begin, end)
 
+
+#keep map from tuples of objects to hierarchy ids:
+# (obj,) <-- object just in scene
+# (par,par,obj,) <-- object being visited through instanced collections; 'par,' entries are empties instancing it
 obj_to_xfh = dict()
+
+#maintain information about current instance stack:
+instance_parents = []
+
+def parent_names():
+	names = "'->'".join(map(lambda x: x.name, instance_parents))
+	if names != '': names = "'" + names + "': "
+	return names
 
 #write_xfh will add an object [and its parents] to the hierarchy section and return a packed (idx) reference:
 def write_xfh(obj):
 	global xfh_data
-	if obj in obj_to_xfh: return obj_to_xfh[obj]
+	par_obj = tuple(instance_parents + [obj])
+	if par_obj in obj_to_xfh: return obj_to_xfh[par_obj]
+
 	if obj.parent == None:
-		parent_ref = struct.pack('i', -1)
-		world_to_parent = mathutils.Matrix()
+		if len(instance_parents) == 0:
+			parent_ref = struct.pack('i', -1)
+			world_to_parent = mathutils.Matrix()
+		else:
+			assert(tuple(instance_parents) in obj_to_xfh) #<-- NOTE: instance parent always written before being passed
+			parent_ref = obj_to_xfh[tuple(instance_parents)]
+			world_to_parent = mathutils.Matrix()
 	else:
 		parent_ref = write_xfh(obj.parent)
 		world_to_parent = obj.parent.matrix_world.copy()
 		world_to_parent.invert()
+	
 	ref = struct.pack('i', len(obj_to_xfh))
-	obj_to_xfh[obj] = ref
+	obj_to_xfh[par_obj] = ref
 	#print(repr(ref) + ": " + obj.name + " (" + repr(parent_ref) + ")")
 	transform = (world_to_parent @ obj.matrix_world).decompose()
 	#print(repr(transform))
@@ -105,13 +125,13 @@ def write_mesh(obj):
 	assert(obj.type == 'MESH')
 	mesh_data += write_xfh(obj) #hierarchy reference
 	mesh_data += write_string(obj.data.name) #mesh name
-	print("mesh: " + obj.name)
+	print("mesh: " + parent_names() + obj.name)
 
 #write_camera will add an object to the camera section:
 def write_camera(obj):
 	global camera_data
 	assert(obj.type == 'CAMERA')
-	print("camera: " + obj.name)
+	print("camera: " + parent_names() + obj.name)
 
 	if obj.data.sensor_fit != 'VERTICAL':
 		print("  WARNING: camera FOV may seem weird because camera is not in vertical-fit mode.")
@@ -135,7 +155,7 @@ def write_camera(obj):
 def write_light(obj):
 	global lamp_data
 	assert(obj.type == 'LIGHT')
-	print("lamp: " + obj.name)
+	print("lamp: " + parent_names() + obj.name)
 
 	f = 1.0 #factor to multiply energy by
 	lamp_data += write_xfh(obj) #hierarchy reference
@@ -170,16 +190,22 @@ def write_light(obj):
 
 written = set()
 def write_objects(from_collection):
+	global instance_parents
 	global written
 	for obj in from_collection.objects:
-		if obj in written: continue
-		written.add(obj)
+		if tuple(instance_parents + [obj]) in written: continue
+		written.add(tuple(instance_parents + [obj]))
 		if obj.type == 'MESH':
 			write_mesh(obj)
 		elif obj.type == 'CAMERA':
 			write_camera(obj)
 		elif obj.type == 'LIGHT':
 			write_light(obj)
+		elif obj.type == 'EMPTY' and obj.instance_collection:
+			write_xfh(obj)
+			instance_parents.append(obj)
+			write_objects(obj.instance_collection)
+			instance_parents.pop()
 		else:
 			print('Skipping ' + obj.type)
 	for child in from_collection.children:
