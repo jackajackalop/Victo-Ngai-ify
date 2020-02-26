@@ -31,7 +31,6 @@ ShadowDebugProgram::ShadowDebugProgram() {
 	glUseProgram(program); //bind program -- glUniform* calls refer to this program now
 
     glUniform1i(glGetUniformLocation(program, "shadow_depth_tex"), 0);
-    //TODO shadow lut
 
 	glUseProgram(0); //unbind program -- glUniform* calls refer to ??? now
     GL_ERRORS();
@@ -75,9 +74,7 @@ SurfaceProgram::SurfaceProgram() {
 	);
 	glUseProgram(program); //bind program -- glUniform* calls refer to this program now
 
-    glUniform1i(glGetUniformLocation(program, "gradient_tex"), 0);
-    glUniform1i(glGetUniformLocation(program, "toon_tex"), 1);
-    //TODO shadow lut
+    glUniform1i(glGetUniformLocation(program, "paper_tex"), 0);
 
 	glUseProgram(0); //unbind program -- glUniform* calls refer to ??? now
     GL_ERRORS();

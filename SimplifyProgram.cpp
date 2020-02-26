@@ -1,4 +1,4 @@
-#include "GradientProgram.hpp"
+#include "SimplifyProgram.hpp"
 
 #include "gl_compile_program.hpp"
 #include "gl_errors.hpp"
@@ -8,8 +8,8 @@ Load< CalculateGradientProgram > calculate_gradient_program
     return new CalculateGradientProgram();
 });
 
-Load< GradientProgram > gradient_program(LoadTagEarly, []() -> GradientProgram const * {
-    return new GradientProgram();
+Load< SimplifyProgram > simplify_program(LoadTagEarly, []() -> SimplifyProgram const * {
+    return new SimplifyProgram();
 });
 
 CalculateGradientProgram::CalculateGradientProgram() {
@@ -85,7 +85,7 @@ CalculateGradientProgram::CalculateGradientProgram() {
     GL_ERRORS();
 }
 
-GradientProgram::GradientProgram() {
+SimplifyProgram::SimplifyProgram() {
 	//Compile vertex and fragment shaders using the convenient 'gl_compile_program' helper function:
 	program = gl_compile_program(
 		//vertex shader:
@@ -178,6 +178,8 @@ GradientProgram::GradientProgram() {
 
 		"void main() {\n"
         "   ivec2 coord = ivec2(gl_FragCoord.xy); \n"
+
+        //calculates the main gradients
         "   vec2 eqR = calculate_eq(0, 0); \n"
         "   vec2 eqG = calculate_eq(1, 0); \n"
         "   vec2 eqB = calculate_eq(2, 0); \n"
@@ -186,6 +188,8 @@ GradientProgram::GradientProgram() {
         "   float gradient_valG = eqG.x*normalizedY+eqG.y; \n"
         "   float gradient_valB = eqB.x*normalizedY+eqB.y; \n"
         "   gradient_out = vec4(gradient_valR, gradient_valG, gradient_valB, 1.0); \n"
+
+        //gradients the toon shading
         "   vec4 toon_color = texelFetch(toon_tex, coord, 0); \n"
         "   float value = max(toon_color.r, max(toon_color.g, toon_color.b));"
         "   if(toon_color.a>0.0){ \n"
@@ -200,6 +204,7 @@ GradientProgram::GradientProgram() {
         "       gradient_toon_out = vec4(0.0); \n"
         "   } \n"
 
+        //line drawing
         "   if(boundaryCheck(coord)||normalCheck(coord)||depthCheck(coord)){ \n"
         "       vec3 scale = vec3(lut_size - 1.0)/lut_size; \n"
         "       vec3 offset = vec3(1.0/(2.0*lut_size)); \n"
@@ -224,7 +229,6 @@ GradientProgram::GradientProgram() {
     glUniform1i(glGetUniformLocation(program, "depth_tex"), 4);
     glUniform1i(glGetUniformLocation(program, "line_lut_tex"), 5);
 
-
 	glUseProgram(0); //unbind program -- glUniform* calls refer to ??? now
     GL_ERRORS();
 }
@@ -234,7 +238,7 @@ CalculateGradientProgram::~CalculateGradientProgram() {
 	program = 0;
 }
 
-GradientProgram::~GradientProgram() {
+SimplifyProgram::~SimplifyProgram() {
 	glDeleteProgram(program);
 	program = 0;
 }

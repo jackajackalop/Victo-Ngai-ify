@@ -166,7 +166,7 @@ GAME_NAMES =
 	ColorTextureProgram
 	SceneProgram
 	ShadowProgram
-    GradientProgram
+    SimplifyProgram
     CombineProgram
     SurfaceProgram
     BilateralishGradientProgram

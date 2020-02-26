@@ -1,8 +1,6 @@
 #pragma once
 
 #include "Mode.hpp"
-
-#include "BoneAnimation.hpp"
 #include "GL.hpp"
 #include "Scene.hpp"
 
@@ -12,8 +10,6 @@
 #include <vector>
 #include <list>
 
-// The 'PlantMode' mode shows off some bone animations:
-
 struct PlantMode : public Mode {
 	PlantMode();
 	virtual ~PlantMode();
@@ -21,51 +17,29 @@ struct PlantMode : public Mode {
 	virtual bool handle_event(SDL_Event const &evt, glm::uvec2 const &window_size) override;
 	virtual void update(float elapsed) override;
 	virtual void draw(glm::uvec2 const &drawable_size) override;
-	//draws out basic scene render, adjusted flat color fills with cell shading
+
+    //creates the shadow map
     void draw_shadows(GLuint *shadow_depth_tex_);
+	//copys the shadow map to the screen
+    void draw_shadow_debug(GLuint shadow_depth_tex, GLuint *shadow_tex_);
+	//draws out the paper textures
+	void draw_surface(GLuint paper_tex, GLuint *surface_tex_);
+    //draws out basic scene render, adjusted flat color fills, cell shading, depth buffer, and also the geometric normals to separate textures
 	void draw_scene(GLuint shadow_depth_tex,
             GLuint *basic_tex_, GLuint *color_tex_, GLuint *depth_tex_,
             GLuint *id_tex_, GLuint *normal_tex_, GLuint *toon_tex_);
-	//draws out gradients
-    void cpu_gradient(GLuint basic_tex, GLuint color_tex, GLuint id_tex);
-	void draw_gradients_linfit(GLuint basic_tex, GLuint color_tex,
+	//draws out linear-fit gradients for both main masses and the toon shaded elements. Also creates line art.
+	void draw_simplify(GLuint basic_tex, GLuint color_tex,
                         GLuint toon_tex, GLuint id_tex, GLuint normal_tex,
                         GLuint depth_tex,
                         GLuint *gradient_tex_, GLuint *gradient_toon_tex_,
                         GLuint *line_tex);
+    //cpu gradient fitting for debugging purposes
     void draw_gradients_cpu(GLuint basic_tex, GLuint color_tex,
                         GLuint id_tex, GLuint *gradient_tex_);
+    void cpu_gradient(GLuint basic_tex, GLuint color_tex, GLuint id_tex);
+    //combines gradient effect, toon shading, line art, paper textures, detail textures, and vignette effect
     void draw_combine(GLuint id_tex, GLuint gradient_tex,
             GLuint gradient_toon_tex, GLuint line_tex, GLuint surface_tex,
             GLuint *shaded_tex_);
-	//paper textures
-	void draw_surface(GLuint paper_tex, GLuint *surface_tex_);
-	void draw_shadow_debug(GLuint shadow_depth_tex, GLuint *shadow_tex_);
-	//screen tones in shadows
-	void draw_screentones();
-	//lineart
-	void draw_lines();
-	//draws the vignette effect
-	void draw_vignette();
-
-	//controls:
-	bool mouse_captured = false;
-	bool forward = false;
-	bool backward = false;
-
-	//scene:
-	Scene::Drawable *plant = nullptr;
-
-    glm::mat4 light_mat = glm::ortho( -10.0f, 10.0f, -10.0f, 10.0f, 0.0f, 100.0f);
-    glm::quat light_rotation = glm::quat(glm::vec3(glm::radians(25.0f), glm::radians(25.0f), 0.0f));
-
-    glm::mat4 make_light_to_local(glm::quat rotation) const {
-        glm::vec3 inv_scale = glm::vec3(1.0, 1.0, 1.0);
-        return glm::mat4( //un-scale
-    		        glm::vec4(inv_scale.x, 0.0f, 0.0f, 0.0f),
-        	    	glm::vec4(0.0f, inv_scale.y, 0.0f, 0.0f),
-		            glm::vec4(0.0f, 0.0f, inv_scale.z, 0.0f),
-            		glm::vec4(0.0f, 0.0f, 0.0f, 1.0f))
-            * glm::mat4_cast(glm::inverse(light_rotation)); //un-rotate
-    }
 };

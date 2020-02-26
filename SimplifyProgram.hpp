@@ -14,9 +14,9 @@ struct CalculateGradientProgram {
     GLuint height = -1U;
 };
 
-struct GradientProgram {
-	GradientProgram();
-	~GradientProgram();
+struct SimplifyProgram {
+	SimplifyProgram();
+	~SimplifyProgram();
 
 	GLuint program = 0;
 
@@ -26,4 +26,4 @@ struct GradientProgram {
 };
 
 extern Load< CalculateGradientProgram > calculate_gradient_program;
-extern Load< GradientProgram > gradient_program;
+extern Load< SimplifyProgram > simplify_program;
