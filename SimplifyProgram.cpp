@@ -18,6 +18,7 @@ CalculateGradientProgram::CalculateGradientProgram() {
 		"#version 430\n"
         "uniform sampler2D basic_tex; \n"
         "uniform sampler2D color_tex; \n"
+        "uniform sampler2D shadow_tex; \n"
         "uniform sampler2D toon_tex; \n"
         "uniform sampler2D id_tex; \n"
         "uniform int width; \n"
@@ -66,8 +67,10 @@ CalculateGradientProgram::CalculateGradientProgram() {
         "   vec4 color = texelFetch(color_tex, coord, 0); \n"
         "   int id = int(texelFetch(id_tex, coord, 0).r*255.0); \n"
         "   add_vals(2*id, color); \n"
-        "   color = texelFetch(toon_tex, coord, 0); \n"
+        "   color = texelFetch(shadow_tex, coord, 0); \n"
         "   add_vals(2*id+1, color); \n"
+        "   color = texelFetch(toon_tex, coord, 0); \n"
+        "   add_vals(2*id+2, color); \n"
 		"}\n"
         }}
 	);
@@ -78,8 +81,9 @@ CalculateGradientProgram::CalculateGradientProgram() {
 
     glUniform1i(glGetUniformLocation(program, "basic_tex"), 0);
     glUniform1i(glGetUniformLocation(program, "color_tex"), 1);
-    glUniform1i(glGetUniformLocation(program, "toon_tex"), 2);
-    glUniform1i(glGetUniformLocation(program, "id_tex"), 3);
+    glUniform1i(glGetUniformLocation(program, "shadow_tex"), 2);
+    glUniform1i(glGetUniformLocation(program, "toon_tex"), 3);
+    glUniform1i(glGetUniformLocation(program, "id_tex"), 4);
 
 	glUseProgram(0); //unbind program -- glUniform* calls refer to ??? now
     GL_ERRORS();
@@ -97,6 +101,7 @@ SimplifyProgram::SimplifyProgram() {
 		//fragment shader:
 		"#version 430\n"
         "uniform sampler2D color_tex; \n"
+        "uniform sampler2D shadow_tex; \n"
         "uniform sampler2D toon_tex; \n"
         "uniform sampler2D id_tex; \n"
         "uniform sampler2D normal_tex; \n"
@@ -115,14 +120,15 @@ SimplifyProgram::SimplifyProgram() {
         "layout(std430, binding=7) buffer vbuffer { uint vsums_packed[]; }; \n"
         "layout(std430, binding=8) buffer nbuffer { uint ns[]; }; \n"
 		"layout(location=0) out vec4 gradient_out;\n"
-		"layout(location=1) out vec4 gradient_toon_out;\n"
-		"layout(location=2) out vec4 line_out;\n"
+		"layout(location=1) out vec4 gradient_shadow_out;\n"
+		"layout(location=2) out vec4 gradient_toon_out;\n"
+		"layout(location=3) out vec4 line_out;\n"
 
         "float unpack_float(uint v){ \n"
         "   return float(v)/4096.0; \n"
         "} \n"
 
-        //type is 0 for base color, 1 for toon shading
+        //type is 0 for base color, 1 for shadows, 2 for toon shading
         "vec2 calculate_eq(int channel, int type){ \n"
         "   ivec2 coord = ivec2(gl_FragCoord.xy); \n"
         "   int id = 2*int(texelFetch(id_tex, coord, 0).r*255)+type; \n"
@@ -189,13 +195,26 @@ SimplifyProgram::SimplifyProgram() {
         "   float gradient_valB = eqB.x*normalizedY+eqB.y; \n"
         "   gradient_out = vec4(gradient_valR, gradient_valG, gradient_valB, 1.0); \n"
 
-        //gradients the toon shading
-        "   vec4 toon_color = texelFetch(toon_tex, coord, 0); \n"
-        "   float value = max(toon_color.r, max(toon_color.g, toon_color.b));"
-        "   if(toon_color.a>0.0){ \n"
+        //gradients the cast shadows
+        "   vec4 shadow_color = texelFetch(shadow_tex, coord, 0); \n"
+        "   if(shadow_color.a>0.0){ \n"
         "       eqR = calculate_eq(0, 1); \n"
         "       eqG = calculate_eq(1, 1); \n"
         "       eqB = calculate_eq(2, 1); \n"
+        "       gradient_valR = eqR.x*normalizedY+eqR.y; \n"
+        "       gradient_valG = eqG.x*normalizedY+eqG.y; \n"
+        "       gradient_valB = eqB.x*normalizedY+eqB.y; \n"
+        "       gradient_shadow_out = vec4(gradient_valR, gradient_valG, gradient_valB, 1.0); \n"
+        "   } else { \n"
+        "       gradient_shadow_out = vec4(0.0); \n"
+        "   } \n"
+
+        //gradients the toon shading
+        "   vec4 toon_color = texelFetch(toon_tex, coord, 0); \n"
+        "   if(toon_color.a>0.0){ \n"
+        "       eqR = calculate_eq(0, 2); \n"
+        "       eqG = calculate_eq(1, 2); \n"
+        "       eqB = calculate_eq(2, 2); \n"
         "       gradient_valR = eqR.x*normalizedY+eqR.y; \n"
         "       gradient_valG = eqG.x*normalizedY+eqG.y; \n"
         "       gradient_valB = eqB.x*normalizedY+eqB.y; \n"
@@ -223,11 +242,12 @@ SimplifyProgram::SimplifyProgram() {
     lut_size = glGetUniformLocation(program, "lut_size");
 
     glUniform1i(glGetUniformLocation(program, "color_tex"), 0);
-    glUniform1i(glGetUniformLocation(program, "toon_tex"), 1);
-    glUniform1i(glGetUniformLocation(program, "id_tex"), 2);
-    glUniform1i(glGetUniformLocation(program, "normal_tex"), 3);
-    glUniform1i(glGetUniformLocation(program, "depth_tex"), 4);
-    glUniform1i(glGetUniformLocation(program, "line_lut_tex"), 5);
+	glUniform1i(glGetUniformLocation(program, "shadow_tex"), 1);
+    glUniform1i(glGetUniformLocation(program, "toon_tex"), 2);
+    glUniform1i(glGetUniformLocation(program, "id_tex"), 3);
+    glUniform1i(glGetUniformLocation(program, "normal_tex"), 4);
+    glUniform1i(glGetUniformLocation(program, "depth_tex"), 5);
+    glUniform1i(glGetUniformLocation(program, "line_lut_tex"), 6);
 
 	glUseProgram(0); //unbind program -- glUniform* calls refer to ??? now
     GL_ERRORS();

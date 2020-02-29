@@ -66,7 +66,8 @@ SceneProgram::SceneProgram() {
 		"layout(location=1) out vec4 color_out;\n"
         "layout(location=2) out vec4 id_out; \n"
         "layout(location=3) out vec4 normal_out; \n"
-        "layout(location=4) out vec4 toon_out; \n"
+        "layout(location=4) out vec4 shadow_out; \n"
+        "layout(location=5) out vec4 toon_out; \n"
 
 		"void main() {\n"
         "   normal_out = vec4(geoNormal, 1.0); \n"
@@ -81,7 +82,9 @@ SceneProgram::SceneProgram() {
         "       vec3 l = normalize(spot_position-position); \n"
 		"	    nl = max(0.0, dot(n,l));\n"
 		"   	float shadow = textureProj(shadow_depth_tex, shadowCoord);\n"
-		"	    light = mix(vec3(0.3,0.3,0.4), vec3(1.0,1.0,0.95), nl*shadow);\n"
+        "       shadow_out = vec4(0.0); \n"
+        "       if(nl*shadow == 0.0) shadow_out = vec4(0.5, 0.5, 0.5, 1.0); \n"
+		"	    light = mix(vec3(0,0,0), vec3(1.0,1.0,0.95), 0.5*nl+0.5);\n"
         "   } \n"
 
 		"	basic_out = vec4(albedo.rgb*light, albedo.a);\n"

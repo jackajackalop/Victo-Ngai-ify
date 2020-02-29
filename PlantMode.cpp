@@ -271,6 +271,7 @@ struct Textures {
     GLuint normal_tex = 0;
     GLuint toon_tex = 0;
     GLuint gradient_tex = 0;
+    GLuint gradient_shadow_tex = 0;
     GLuint gradient_toon_tex = 0;
     GLuint line_tex = 0;
     GLuint shaded_tex = 0;
@@ -308,6 +309,7 @@ struct Textures {
             alloc_tex(&normal_tex, GL_RGBA8, GL_RGBA, size);
             alloc_tex(&toon_tex, GL_RGBA8, GL_RGBA, size);
             alloc_tex(&gradient_tex, GL_RGBA8, GL_RGBA, size);
+            alloc_tex(&gradient_shadow_tex, GL_RGBA8, GL_RGBA, size);
             alloc_tex(&gradient_toon_tex, GL_RGBA8, GL_RGBA, size);
             alloc_tex(&line_tex, GL_RGBA8, GL_RGBA, size);
             alloc_tex(&depth_tex, GL_DEPTH_COMPONENT24, GL_DEPTH_COMPONENT, size);
@@ -375,19 +377,21 @@ void PlantMode::draw_shadows(GLuint *shadow_depth_tex_)
 
 void PlantMode::draw_scene(GLuint shadow_depth_tex, GLuint *basic_tex_,
         GLuint *color_tex_, GLuint *depth_tex_, GLuint *id_tex_,
-        GLuint *normal_tex_, GLuint *toon_tex_)
+        GLuint *normal_tex_, GLuint *shadow_tex_, GLuint *toon_tex_)
 {
     assert(basic_tex_);
     assert(color_tex_);
     assert(depth_tex_);
     assert(id_tex_);
     assert(normal_tex_);
+    assert(shadow_tex_);
     assert(toon_tex_);
     auto &basic_tex = *basic_tex_;
     auto &color_tex = *color_tex_;
     auto &depth_tex = *depth_tex_;
     auto &id_tex = *id_tex_;
     auto &normal_tex = *normal_tex_;
+    auto &shadow_tex = *shadow_tex_;
     auto &toon_tex = *toon_tex_;
 
     static GLuint fb = 0;
@@ -402,12 +406,15 @@ void PlantMode::draw_scene(GLuint shadow_depth_tex, GLuint *basic_tex_,
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D,
             normal_tex, 0);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT4, GL_TEXTURE_2D,
+            shadow_tex, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT5, GL_TEXTURE_2D,
             toon_tex, 0);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D,
             depth_tex, 0);
-    GLenum bufs[5] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1,
-        GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4};
-    glDrawBuffers(5, bufs);
+    GLenum bufs[6] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1,
+        GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3, GL_COLOR_ATTACHMENT4,
+        GL_COLOR_ATTACHMENT5};
+    glDrawBuffers(6, bufs);
     check_fb();
 
     //Draw scene:
@@ -616,13 +623,17 @@ void PlantMode::cpu_gradient(GLuint basic_tex, GLuint color_tex,
 }
 
 void PlantMode::draw_simplify(GLuint basic_tex, GLuint color_tex,
+        GLuint shadow_tex,
         GLuint toon_tex, GLuint id_tex, GLuint normal_tex, GLuint depth_tex,
-        GLuint *gradient_tex_, GLuint *gradient_toon_tex_, GLuint *line_tex_)
+        GLuint *gradient_tex_, GLuint *gradient_shadow_tex_,
+        GLuint *gradient_toon_tex_, GLuint *line_tex_)
 {
     assert(gradient_tex_);
+    assert(gradient_shadow_tex_);
     assert(gradient_toon_tex_);
     assert(line_tex_);
     auto &gradient_tex = *gradient_tex_;
+    auto &gradient_shadow_tex = *gradient_shadow_tex_;
     auto &gradient_toon_tex = *gradient_toon_tex_;
     auto &line_tex = *line_tex_;
 
@@ -632,12 +643,14 @@ void PlantMode::draw_simplify(GLuint basic_tex, GLuint color_tex,
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
             gradient_tex, 0);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D,
-            gradient_toon_tex, 0);
+            gradient_shadow_tex, 0);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D,
+            gradient_toon_tex, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D,
             line_tex, 0);
-    GLenum bufs[3] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1,
-        GL_COLOR_ATTACHMENT2};
-    glDrawBuffers(3, bufs);
+    GLenum bufs[4] = {GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1,
+        GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3};
+    glDrawBuffers(4, bufs);
     check_fb();
 
     //set glViewport
@@ -654,8 +667,8 @@ void PlantMode::draw_simplify(GLuint basic_tex, GLuint color_tex,
     glBlendEquation(GL_FUNC_ADD);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    int chunk_num = 2*scene->drawables.size();
-    //*2 because each chunk has an associated toon that also gets a gradient
+    int chunk_num = 3*scene->drawables.size();
+    //*3 because each chunk has an associated toon and cast shadow
     std::vector<float> wsum (chunk_num, 0.0f);
     std::vector<float> hsum (chunk_num, 0.0f);
     std::vector<float> w2sum (chunk_num, 0.0f);
@@ -716,8 +729,10 @@ void PlantMode::draw_simplify(GLuint basic_tex, GLuint color_tex,
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, color_tex);
     glActiveTexture(GL_TEXTURE2);
-    glBindTexture(GL_TEXTURE_2D, toon_tex);
+    glBindTexture(GL_TEXTURE_2D, shadow_tex);
     glActiveTexture(GL_TEXTURE3);
+    glBindTexture(GL_TEXTURE_2D, toon_tex);
+    glActiveTexture(GL_TEXTURE4);
     glBindTexture(GL_TEXTURE_2D, id_tex);
 
     glDispatchCompute(textures.size.x, textures.size.y, 1);
@@ -728,14 +743,16 @@ void PlantMode::draw_simplify(GLuint basic_tex, GLuint color_tex,
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, color_tex);
     glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, toon_tex);
+    glBindTexture(GL_TEXTURE_2D, shadow_tex);
     glActiveTexture(GL_TEXTURE2);
-    glBindTexture(GL_TEXTURE_2D, id_tex);
+    glBindTexture(GL_TEXTURE_2D, toon_tex);
     glActiveTexture(GL_TEXTURE3);
-    glBindTexture(GL_TEXTURE_2D, normal_tex);
+    glBindTexture(GL_TEXTURE_2D, id_tex);
     glActiveTexture(GL_TEXTURE4);
-    glBindTexture(GL_TEXTURE_2D, depth_tex);
+    glBindTexture(GL_TEXTURE_2D, normal_tex);
     glActiveTexture(GL_TEXTURE5);
+    glBindTexture(GL_TEXTURE_2D, depth_tex);
+    glActiveTexture(GL_TEXTURE6);
     glBindTexture(GL_TEXTURE_3D, *line_lut_tex);
 
     glUseProgram(simplify_program->program);
@@ -748,8 +765,8 @@ void PlantMode::draw_simplify(GLuint basic_tex, GLuint color_tex,
 }
 
 void PlantMode::draw_combine(GLuint id_tex, GLuint gradient_tex,
-        GLuint gradient_toon_tex, GLuint line_tex, GLuint surface_tex,
-        GLuint *shaded_tex_){
+        GLuint gradient_shadow_tex, GLuint gradient_toon_tex, GLuint line_tex,
+        GLuint surface_tex, GLuint *shaded_tex_){
     assert(shaded_tex_);
     auto &shaded_tex = *shaded_tex_;
 
@@ -780,14 +797,16 @@ void PlantMode::draw_combine(GLuint id_tex, GLuint gradient_tex,
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, gradient_tex);
     glActiveTexture(GL_TEXTURE2);
-    glBindTexture(GL_TEXTURE_2D, gradient_toon_tex);
+    glBindTexture(GL_TEXTURE_2D, gradient_shadow_tex);
     glActiveTexture(GL_TEXTURE3);
-    glBindTexture(GL_TEXTURE_2D, line_tex);
+    glBindTexture(GL_TEXTURE_2D, gradient_toon_tex);
     glActiveTexture(GL_TEXTURE4);
-    glBindTexture(GL_TEXTURE_2D, surface_tex);
+    glBindTexture(GL_TEXTURE_2D, line_tex);
     glActiveTexture(GL_TEXTURE5);
-    glBindTexture(GL_TEXTURE_2D, *vignette_tex);
+    glBindTexture(GL_TEXTURE_2D, surface_tex);
     glActiveTexture(GL_TEXTURE6);
+    glBindTexture(GL_TEXTURE_2D, *vignette_tex);
+    glActiveTexture(GL_TEXTURE7);
     glBindTexture(GL_TEXTURE_2D, *detail_tex);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, n_ssbo);
 
@@ -893,19 +912,19 @@ void PlantMode::draw(glm::uvec2 const &drawable_size) {
     }
     draw_scene(textures.shadow_depth_tex,
             &textures.basic_tex, &textures.color_tex, &textures.depth_tex,
-            &textures.id_tex, &textures.normal_tex, &textures.toon_tex);
-    if(show == SHADOWS) {
-        draw_shadow_debug(textures.shadow_depth_tex, &textures.shadow_tex);
-    }
+            &textures.id_tex, &textures.normal_tex, &textures.shadow_tex,
+            &textures.toon_tex);
     if(show >= SIMPLIFY){
         draw_simplify(textures.basic_tex, textures.color_tex,
+                textures.shadow_tex,
                 textures.toon_tex, textures.id_tex, textures.normal_tex,
-                textures.depth_tex,
-                &textures.gradient_tex, &textures.gradient_toon_tex,
+                textures.depth_tex, &textures.gradient_tex,
+                &textures.gradient_shadow_tex, &textures.gradient_toon_tex,
                 &textures.line_tex);
     }
     if(show >= SHADED) {
         draw_combine(textures.id_tex, textures.gradient_tex,
+                textures.gradient_shadow_tex,
                 textures.gradient_toon_tex, textures.line_tex,
                 textures.surface_tex, &textures.shaded_tex);
     }
