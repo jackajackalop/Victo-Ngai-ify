@@ -66,11 +66,11 @@ CalculateGradientProgram::CalculateGradientProgram() {
         "   ivec2 coord = ivec2(gl_GlobalInvocationID.xy); \n"
         "   vec4 color = texelFetch(color_tex, coord, 0); \n"
         "   int id = int(texelFetch(id_tex, coord, 0).r*255.0); \n"
-        "   add_vals(2*id, color); \n"
+        "   add_vals(3*id, color); \n"
         "   color = texelFetch(shadow_tex, coord, 0); \n"
-        "   add_vals(2*id+1, color); \n"
+        "   add_vals(3*id+1, color); \n"
         "   color = texelFetch(toon_tex, coord, 0); \n"
-        "   add_vals(2*id+2, color); \n"
+        "   add_vals(3*id+2, color); \n"
 		"}\n"
         }}
 	);
@@ -131,7 +131,7 @@ SimplifyProgram::SimplifyProgram() {
         //type is 0 for base color, 1 for shadows, 2 for toon shading
         "vec2 calculate_eq(int channel, int type){ \n"
         "   ivec2 coord = ivec2(gl_FragCoord.xy); \n"
-        "   int id = 2*int(texelFetch(id_tex, coord, 0).r*255)+type; \n"
+        "   int id = 3*int(texelFetch(id_tex, coord, 0).r*255)+type; \n"
         "   float wsum = unpack_float(wsums_packed[id]); \n"
         "   float hsum = unpack_float(hsums_packed[id]); \n"
         "   float w2sum = unpack_float(w2sums_packed[id]); \n"
@@ -149,11 +149,11 @@ SimplifyProgram::SimplifyProgram() {
         "} \n"
 
         "bool boundaryCheck(ivec2 coord) { \n"
-        "   int id = 2*int(texelFetch(id_tex, coord, 0).r*255); \n"
-        "   int idl = 2*int(texelFetch(id_tex, coord+ivec2(-1, 0), 0).r*255); \n"
-        "   int idr = 2*int(texelFetch(id_tex, coord+ivec2(1, 0), 0).r*255); \n"
-        "   int idu = 2*int(texelFetch(id_tex, coord+ivec2(0, 1), 0).r*255); \n"
-        "   int idd = 2*int(texelFetch(id_tex, coord+ivec2(0, -1), 0).r*255); \n"
+        "   int id = 3*int(texelFetch(id_tex, coord, 0).r*255); \n"
+        "   int idl = 3*int(texelFetch(id_tex, coord+ivec2(-1, 0), 0).r*255); \n"
+        "   int idr = 3*int(texelFetch(id_tex, coord+ivec2(1, 0), 0).r*255); \n"
+        "   int idu = 3*int(texelFetch(id_tex, coord+ivec2(0, 1), 0).r*255); \n"
+        "   int idd = 3*int(texelFetch(id_tex, coord+ivec2(0, -1), 0).r*255); \n"
         "   return !(id==idl && id==idr && id==idu && id==idd);"
         "} \n"
 
