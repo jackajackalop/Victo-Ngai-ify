@@ -296,8 +296,8 @@ struct Textures {
                 glBindTexture(GL_TEXTURE_2D, *tex);
                 glTexImage2D(GL_TEXTURE_2D, 0, internalformat, size.x,
                         size.y, 0, format, GL_UNSIGNED_BYTE, NULL);
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
                 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
                 glBindTexture(GL_TEXTURE_2D, 0);
@@ -748,10 +748,16 @@ void PlantMode::draw_simplify(GLuint basic_tex, GLuint color_tex,
     glBindTexture(GL_TEXTURE_2D, toon_tex);
     glActiveTexture(GL_TEXTURE3);
     glBindTexture(GL_TEXTURE_2D, id_tex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glGenerateMipmap(GL_TEXTURE_2D);
     glActiveTexture(GL_TEXTURE4);
     glBindTexture(GL_TEXTURE_2D, normal_tex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glGenerateMipmap(GL_TEXTURE_2D);
     glActiveTexture(GL_TEXTURE5);
     glBindTexture(GL_TEXTURE_2D, depth_tex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glGenerateMipmap(GL_TEXTURE_2D);
     glActiveTexture(GL_TEXTURE6);
     glBindTexture(GL_TEXTURE_3D, *line_lut_tex);
 
@@ -907,7 +913,7 @@ void PlantMode::draw(glm::uvec2 const &drawable_size) {
         draw_shadows(&textures.shadow_depth_tex);
     }
     if(!surfaced) {
-        surfaced = true;
+        //surfaced = true;
         draw_surface(*paper_tex, &textures.surface_tex);
     }
     draw_scene(textures.shadow_depth_tex,
