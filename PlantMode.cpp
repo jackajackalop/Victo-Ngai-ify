@@ -151,6 +151,30 @@ static Load< GLuint > paper_tex(LoadTagDefault, [](){
         return new GLuint (load_texture(data_path("textures/paper.png")));
         });
 
+static Load< GLuint > print0_tex(LoadTagDefault, [](){
+        return new GLuint (load_texture(data_path("textures/0.png")));
+        });
+
+static Load< GLuint > print1_tex(LoadTagDefault, [](){
+        return new GLuint (load_texture(data_path("textures/1.png")));
+        });
+
+static Load< GLuint > print2_tex(LoadTagDefault, [](){
+        return new GLuint (load_texture(data_path("textures/2.png")));
+        });
+
+static Load< GLuint > print3_tex(LoadTagDefault, [](){
+        return new GLuint (load_texture(data_path("textures/3.png")));
+        });
+
+static Load< GLuint > print4_tex(LoadTagDefault, [](){
+        return new GLuint (load_texture(data_path("textures/4.png")));
+        });
+
+static Load< GLuint > print5_tex(LoadTagDefault, [](){
+        return new GLuint (load_texture(data_path("textures/5.png")));
+        });
+
 static Load< GLuint > vignette_tex(LoadTagDefault, [](){
         return new GLuint (load_texture(data_path("textures/vignette.png")));
         });
@@ -760,11 +784,24 @@ void PlantMode::draw_simplify(GLuint basic_tex, GLuint color_tex,
     glGenerateMipmap(GL_TEXTURE_2D);
     glActiveTexture(GL_TEXTURE6);
     glBindTexture(GL_TEXTURE_3D, *line_lut_tex);
+    glActiveTexture(GL_TEXTURE7);
+    glBindTexture(GL_TEXTURE_2D, *print0_tex);
+    glActiveTexture(GL_TEXTURE8);
+    glBindTexture(GL_TEXTURE_2D, *print1_tex);
+    glActiveTexture(GL_TEXTURE9);
+    glBindTexture(GL_TEXTURE_2D, *print2_tex);
+    glActiveTexture(GL_TEXTURE10);
+    glBindTexture(GL_TEXTURE_2D, *print3_tex);
+    glActiveTexture(GL_TEXTURE11);
+    glBindTexture(GL_TEXTURE_2D, *print4_tex);
+    glActiveTexture(GL_TEXTURE12);
+    glBindTexture(GL_TEXTURE_2D, *print5_tex);
 
     glUseProgram(simplify_program->program);
     glUniform1i(simplify_program->width, textures.size.x);
     glUniform1i(simplify_program->height, textures.size.y);
     glUniform1i(simplify_program->lut_size, lut_size);
+    GL_ERRORS();
     glDrawArrays(GL_TRIANGLES, 0, 3);
 
     GL_ERRORS();

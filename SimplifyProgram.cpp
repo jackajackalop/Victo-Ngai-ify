@@ -107,6 +107,12 @@ SimplifyProgram::SimplifyProgram() {
         "uniform sampler2D normal_tex; \n"
         "uniform sampler2D depth_tex; \n"
         "uniform sampler3D line_lut_tex; \n"
+        "uniform sampler2D print0_tex; \n"
+        "uniform sampler2D print1_tex; \n"
+        "uniform sampler2D print2_tex; \n"
+        "uniform sampler2D print3_tex; \n"
+        "uniform sampler2D print4_tex; \n"
+        "uniform sampler2D print5_tex; \n"
         "uniform int lut_size; \n"
         "uniform int width; \n"
         "uniform int height; \n"
@@ -187,7 +193,44 @@ SimplifyProgram::SimplifyProgram() {
         "   return edgen>threshold;"
         "} \n"
 
-		"void main() {\n"
+        //Based on Jaume Sanchez Elias's implementation of "Real-Time Hatching"
+        //https://github.com/spite/cross-hatching
+        //http://hhoppe.com/hatching.pdf
+        "vec4 tone(vec4 og){ \n"
+        "   vec2 tile = textureSize(print0_tex, 0);"
+        "   vec2 uv = gl_FragCoord.xy/tile*4.0; \n"
+        "   vec4 print0 = texture(print0_tex, uv, 0);\n"
+        "   vec4 print1 = texture(print1_tex, uv, 0);\n"
+        "   vec4 print2 = texture(print2_tex, uv, 0);\n"
+        "   vec4 print3 = texture(print3_tex, uv, 0);\n"
+        "   vec4 print4 = texture(print4_tex, uv, 0);\n"
+        "   vec4 print5 = texture(print5_tex, uv, 0);\n"
+        "   float ambientWeight = 0.08; \n"
+        "   float diffuseWeight = 1.0; \n"
+        "   float rimWeight = 0.46; \n"
+        "   float specularWeight = 1.0; \n"
+        "   float shininess = 49.0; \n"
+        "   float shading = (og.r+og.g+og.b)/3.0; \n"
+        "   if(shading>0) shading+=0.5; \n"
+        "   vec4 c = vec4( 0.0, 0.0, 0.0, 0.0); \n"
+        "   float step = 1.0/6.0; \n"
+        "   if( shading <= step && shading > 0.0) \n"
+        "       c = mix(print5, print4, 6.0*shading); \n"
+        "   if( shading>step && shading<=2.0*step) \n"
+        "       c = mix(print4, print3, 6.0*(shading-step)); \n"
+        "   if( shading>2.0*step && shading<=3.0*step) \n"
+        "       c = mix(print3, print2, 6.0*(shading-2.0*step)); \n"
+        "   if( shading>3.0*step && shading<=4.0*step) \n"
+        "       c = mix(print2, print1, 6.0*(shading-3.0*step)); \n"
+        "   if( shading>4.0*step && shading<=5.0*step) \n"
+        "       c = mix(print1, print0, 6.0*(shading-4.0*step)); \n"
+        "   if( shading>5.0*step ) \n"
+        "       c = mix( print0, vec4(1.0), 6.0*(shading-5.0*step)); \n"
+        "   if(c.a>0.0) return og*0.8; \n"
+        "   return og; \n"
+        "} \n"
+
+        "void main() {\n"
         "   ivec2 coord = ivec2(gl_FragCoord.xy); \n"
 
         //calculates the main gradients
@@ -223,7 +266,7 @@ SimplifyProgram::SimplifyProgram() {
         "       gradient_valR = eqR.x*normalizedY+eqR.y; \n"
         "       gradient_valG = eqG.x*normalizedY+eqG.y; \n"
         "       gradient_valB = eqB.x*normalizedY+eqB.y; \n"
-        "       gradient_toon_out = vec4(gradient_valR, gradient_valG, gradient_valB, 1.0); \n"
+        "       gradient_toon_out = tone(vec4(gradient_valR, gradient_valG, gradient_valB, 1.0)); \n"
         "   } else { \n"
         "       gradient_toon_out = vec4(0.0); \n"
         "   } \n"
@@ -253,6 +296,12 @@ SimplifyProgram::SimplifyProgram() {
     glUniform1i(glGetUniformLocation(program, "normal_tex"), 4);
     glUniform1i(glGetUniformLocation(program, "depth_tex"), 5);
     glUniform1i(glGetUniformLocation(program, "line_lut_tex"), 6);
+    glUniform1i(glGetUniformLocation(program, "print0_tex"), 7);
+    glUniform1i(glGetUniformLocation(program, "print1_tex"), 8);
+    glUniform1i(glGetUniformLocation(program, "print2_tex"), 9);
+    glUniform1i(glGetUniformLocation(program, "print3_tex"), 10);
+    glUniform1i(glGetUniformLocation(program, "print4_tex"), 11);
+    glUniform1i(glGetUniformLocation(program, "print5_tex"), 12);
 
 	glUseProgram(0); //unbind program -- glUniform* calls refer to ??? now
     GL_ERRORS();
