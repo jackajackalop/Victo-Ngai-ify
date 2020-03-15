@@ -955,14 +955,14 @@ void PlantMode::draw(glm::uvec2 const &drawable_size) {
         shadowed = true;
         draw_shadows(&textures.shadow_depth_tex);
     }
-    if(!surfaced) {
-        //surfaced = true;
-        draw_surface(*paper_tex, &textures.surface_tex);
-    }
     draw_scene(textures.shadow_depth_tex,
             &textures.basic_tex, &textures.color_tex, &textures.depth_tex,
             &textures.id_tex, &textures.normal_tex, &textures.shadow_tex,
             &textures.toon_tex);
+    if(!surfaced) {
+        surfaced = true;
+        draw_surface(*paper_tex, &textures.surface_tex);
+    }
     if(show >= SIMPLIFY){
         draw_simplify(textures.basic_tex, textures.color_tex,
                 textures.shadow_tex,
