@@ -139,6 +139,10 @@ static Load< GLuint > lut_tex(LoadTagDefault, []() -> GLuint const *{
         return new GLuint(load_LUT(data_path("lut-fixed.cube")));
         });
 
+static Load< GLuint > toon_lut_tex(LoadTagDefault, []() -> GLuint const *{
+        return new GLuint(load_LUT(data_path("toon_lut.cube")));
+        });
+
 static Load< GLuint > shadow_lut_tex(LoadTagDefault, []() -> GLuint const *{
         return new GLuint(load_LUT(data_path("shadow_lut.cube")));
         });
@@ -463,6 +467,8 @@ void PlantMode::draw_scene(GLuint shadow_depth_tex, GLuint *basic_tex_,
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_3D, *lut_tex);
     glActiveTexture(GL_TEXTURE2);
+    glBindTexture(GL_TEXTURE_3D, *toon_lut_tex);
+    glActiveTexture(GL_TEXTURE3);
     glBindTexture(GL_TEXTURE_3D, *shadow_lut_tex);
     glUseProgram(scene_program->program);
 
