@@ -83,7 +83,7 @@ SceneProgram::SceneProgram() {
 		"   nl = max(0.0, dot(n,l));\n"
 		"   float shadow = textureProj(shadow_depth_tex, shadowCoord);\n"
         "   shadow_out = vec4(0.0); \n"
-		"	light = mix(vec3(0,0,0), vec3(1.0,1.0,0.95), 0.5*nl+0.5);\n"
+		"	light = mix(vec3(0.2,0.2,0.2), vec3(1.0,1.0,0.95), 0.5*nl+0.5);\n"
 
 		"	basic_out = vec4(albedo.rgb*light, albedo.a);\n"
         "   color_out = basic_out; \n"
@@ -91,7 +91,7 @@ SceneProgram::SceneProgram() {
         "   vec3 offset = vec3(1.0/(2.0*lut_size)); \n"
         "   vec3 lut_color = texture(lut_tex, scale*color_out.rgb+offset).rgb; \n"
         "   vec3 toon_lut_color = texture(toon_lut_tex, scale*lut_color+offset).rgb; \n"
-        "   vec3 shadow_lut_color = texture(shadow_lut_tex, scale*lut_color+offset).rgb; \n"
+        "   vec3 shadow_lut_color = texture(shadow_lut_tex, scale*color_out.rgb+offset).rgb; \n"
         "   color_out = vec4(lut_color, 1.0); \n"
 
          //shadow color

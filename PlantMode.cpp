@@ -267,16 +267,16 @@ bool PlantMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size
     if(evt.type == SDL_KEYDOWN){
         if(evt.key.keysym.scancode == SDL_SCANCODE_0){
             show = BASIC;
+        }else if(evt.key.keysym.scancode == SDL_SCANCODE_1){
+            show = SHADOWS;
+        }else if(evt.key.keysym.scancode == SDL_SCANCODE_2){
+            show = SURFACE;
         }else if(evt.key.keysym.scancode == SDL_SCANCODE_3){
             show = FLATS;
         }else if(evt.key.keysym.scancode == SDL_SCANCODE_4){
             show = SIMPLIFY;
-        }else if(evt.key.keysym.scancode == SDL_SCANCODE_1){
-            show = SHADOWS;
         }else if(evt.key.keysym.scancode == SDL_SCANCODE_5){
             show = SHADED;
-        }else if(evt.key.keysym.scancode == SDL_SCANCODE_2){
-            show = SURFACE;
         }
     }
 

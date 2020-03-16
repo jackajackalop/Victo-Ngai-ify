@@ -242,6 +242,10 @@ SimplifyProgram::SimplifyProgram() {
         "   float gradient_valG = eqG.x*normalizedY+eqG.y; \n"
         "   float gradient_valB = eqB.x*normalizedY+eqB.y; \n"
         "   gradient_out = vec4(gradient_valR, gradient_valG, gradient_valB, 1.0); \n"
+        //adds a depth based gradient
+        "   float s = texelFetch(depth_tex, coord, 0).r;"
+        "   s = (2.0*0.1)/(1000.0+0.1-s*(1000.0-0.1));"
+        "   gradient_out.rgb *= 1.0-s*0.4; \n"
 
         //gradients the cast shadows
         "   vec4 shadow_color = texelFetch(shadow_tex, coord, 0); \n"
