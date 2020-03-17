@@ -131,6 +131,7 @@ SimplifyProgram::SimplifyProgram() {
 		"layout(location=3) out vec4 line_out;\n"
 
         "int lod = 1; \n"
+        "vec3 line_color = vec3(0, 0, 0); \n"
 
         "float unpack_float(uint v){ \n"
         "   return float(v)/4096.0; \n"
@@ -174,6 +175,12 @@ SimplifyProgram::SimplifyProgram() {
         "   float d1 = texelFetch(depth_tex, c+ivec2(1, 1), lod).r; \n"
         "   float d2 = texelFetch(depth_tex, c+ivec2(-1, -1), lod).r; \n"
         "   float d3 = texelFetch(depth_tex, c+ivec2(-1, 1), lod).r; \n"
+        "   float mind = min(d0, min(d1, min(d2, d3))); \n"
+        "   if(mind == d0) line_color = texelFetch(color_tex, c+ivec2(1, -1), lod).rgb; \n"
+        "   if(mind == d1) line_color = texelFetch(color_tex, c+ivec2(1, 1), lod).rgb; \n"
+        "   if(mind == d2) line_color = texelFetch(color_tex, c+ivec2(-1, -1), lod).rgb; \n"
+        "   if(mind == d3) line_color = texelFetch(color_tex, c+ivec2(-1, 1), lod).rgb; \n"
+
         "   float ddif0 = d1-d0; \n"
         "   float ddif1 = d3-d2; \n"
         "   float edged = sqrt(ddif0*ddif0 + ddif1*ddif1)*100; \n"
@@ -276,11 +283,10 @@ SimplifyProgram::SimplifyProgram() {
         "   } \n"
 
         //line drawing
-        "   if(boundaryCheck(coord)||normalCheck(coord)||depthCheck(coord)){ \n"
+        "   if(depthCheck(coord)||boundaryCheck(coord)||normalCheck(coord)){ \n"
         "       vec3 scale = vec3(lut_size - 1.0)/lut_size; \n"
         "       vec3 offset = vec3(1.0/(2.0*lut_size)); \n"
-        "       vec4 base_color = texelFetch(color_tex, coord, 0); \n"
-        "       vec3 line_color = texture(line_lut_tex, scale*base_color.rgb+offset).rgb; \n"
+        "       line_color = texture(line_lut_tex, scale*line_color+offset).rgb; \n"
         "       line_out = vec4(line_color, 1.0);"
         "   } else { \n"
         "       line_out = vec4(0.0); \n"

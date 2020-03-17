@@ -772,6 +772,8 @@ void PlantMode::draw_simplify(GLuint basic_tex, GLuint color_tex,
     //draw the gradient using the calculated values
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, color_tex);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glGenerateMipmap(GL_TEXTURE_2D);
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, shadow_tex);
     glActiveTexture(GL_TEXTURE2);
