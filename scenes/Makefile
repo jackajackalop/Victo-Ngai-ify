@@ -13,8 +13,8 @@ all : \
 	../dist/vignette.scene \
 	../dist/plant.pnct \
 	../dist/plant.banims \
-	../dist/spheres.pnct \
-	../dist/spheres.scene \
+	../dist/shower.pnct \
+	../dist/shower.scene \
 	../dist/rat_girl.pnct \
 	../dist/rat_girl.scene
 
@@ -31,11 +31,11 @@ all : \
 ../dist/vignette.pnct : vignette.blend export-meshes.py
 	$(BLENDER) --background --python export-meshes.py -- 'vignette.blend' '$@'
 
-../dist/spheres.scene : spheres.blend export-scene.py
-	$(BLENDER) --background --python export-scene.py -- 'spheres.blend' '$@'
+../dist/shower.scene : shower.blend export-scene.py
+	$(BLENDER) --background --python export-scene.py -- 'shower.blend' '$@'
 
-../dist/spheres.pnct : spheres.blend export-meshes.py
-	$(BLENDER) --background --python export-meshes.py -- 'spheres.blend' '$@'
+../dist/shower.pnct : shower.blend export-meshes.py
+	$(BLENDER) --background --python export-meshes.py -- 'shower.blend' '$@'
 
 ../dist/rat_girl.pnct : rat_girl.blend export-meshes.py
 	$(BLENDER) --background --python export-meshes.py -- 'rat_girl.blend' '$@'

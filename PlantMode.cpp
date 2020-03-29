@@ -129,7 +129,7 @@ GLuint load_LUT(std::string const &filename) {
 }
 
 static Load< MeshBuffer > meshes(LoadTagDefault, []() -> MeshBuffer const * {
-        MeshBuffer *ret = new MeshBuffer(data_path("rat_girl.pnct"));
+        MeshBuffer *ret = new MeshBuffer(data_path("shower.pnct"));
         meshes_for_scene_program = ret->make_vao_for_program(scene_program->program);
         return ret;
         });
@@ -189,7 +189,7 @@ static Load< GLuint > detail_tex(LoadTagDefault, [](){
 
 static Load< Scene > scene(LoadTagLate, []() -> Scene const * {
         Scene *ret = new Scene();
-        ret->load(data_path("rat_girl.scene"), [](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
+        ret->load(data_path("shower.scene"), [](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
                 auto &mesh = meshes->lookup(mesh_name);
                 scene.drawables.emplace_back(transform);
                 Scene::Drawable::Pipeline &pipeline = scene.drawables.back().pipeline;
