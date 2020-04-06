@@ -250,7 +250,7 @@ bool PlantMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size
             camera_spin.y -= 3.0*evt.motion.yrel / float(window_size.y);
             return true;
         } else if (evt.motion.state & SDL_BUTTON(SDL_BUTTON_RIGHT)) {
-            camera_shift.x -= 100.0*evt.motion.xrel / float(window_size.x);
+            camera_shift.y -= 100.0*evt.motion.xrel / float(window_size.x);
             camera_shift.z += 100.0*evt.motion.yrel / float(window_size.y);
             return true;
         }
@@ -258,9 +258,9 @@ bool PlantMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size
 
     if(evt.type == SDL_MOUSEWHEEL) {
         if(evt.wheel.y > 0){
-            camera_shift.y += 4000.0*evt.wheel.y / float(window_size.x);
+            camera_shift.x += 4000.0*evt.wheel.y / float(window_size.x);
         }else if(evt.wheel.y < 0) {
-            camera_shift.y += 4000.0*evt.wheel.y / float(window_size.x);
+            camera_shift.x += 4000.0*evt.wheel.y / float(window_size.x);
         }
     }
 
@@ -285,7 +285,7 @@ bool PlantMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size
 
 void PlantMode::update(float elapsed) {
     camera_parent_transform->rotation = glm::angleAxis(camera_spin.x, glm::vec3(0.0f, 0.0f, 1.0f))
-        *glm::angleAxis(camera_spin.y, glm::vec3(1.0, 0.0, 0.0));
+        *glm::angleAxis(camera_spin.y, glm::vec3(0.0, 1.0, 0.0));
     camera_parent_transform->position = camera_shift;
 }
 

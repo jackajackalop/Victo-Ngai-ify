@@ -263,6 +263,8 @@ SimplifyProgram::SimplifyProgram() {
         "       gR = eqR.x*normalizedY+eqR.y; \n"
         "       gG = eqG.x*normalizedY+eqG.y; \n"
         "       gB = eqB.x*normalizedY+eqB.y; \n"
+        "       s = texelFetch(depth_tex, coord, 0).r;"
+        "       s = (2.0*0.1)/(600.0+0.1-s*(600.0-0.1));"
         "       float adj = (1.0-s)*(1.0-s); \n"
         "       gR = gR*(gR-adj*gradient_out.r)+(1.0-adj)*gradient_out.r; \n"
         "       gG = gG*(gG-adj*gradient_out.g)+(1.0-adj)*gradient_out.g; \n"
