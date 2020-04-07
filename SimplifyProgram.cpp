@@ -130,7 +130,7 @@ SimplifyProgram::SimplifyProgram() {
 		"layout(location=2) out vec4 gradient_toon_out;\n"
 		"layout(location=3) out vec4 line_out;\n"
 
-        "int lod = 1; \n"
+        "int lod = 0; \n"
         "vec3 line_color = vec3(0, 0, 0); \n"
 
         "float unpack_float(uint v){ \n"
