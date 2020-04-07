@@ -115,12 +115,12 @@ struct Scene {
 		glm::vec3 energy = glm::vec3(1.0f);
 
 		//Spotlight specific:
-		float fov = glm::radians(45.0f);
+		float fov = glm::radians(71.0f);
 
 		//near and far planes for shadow maps:
 		float aspect = 1.0f;
-		float near = 7.0f;
-		float far = 30.0f;
+		float near = 0.1f;
+		float far = 20.0f;
 
 		//computed from the above:
 		glm::mat4 make_projection() const;

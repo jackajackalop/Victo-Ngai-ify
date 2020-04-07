@@ -308,7 +308,7 @@ struct Textures {
 
     GLuint depth_tex = 0;
     GLuint shadow_depth_tex = 0;
-    glm::uvec2 shadow_size = glm::uvec2(2048, 2048);
+    glm::uvec2 shadow_size = glm::uvec2(1024, 1024);
     glm::mat4 shadow_world_to_clip = glm::mat4(1.0);
 
     GLuint final_tex = 0;
@@ -964,6 +964,9 @@ void PlantMode::draw(glm::uvec2 const &drawable_size) {
     if(!surfaced) {
         surfaced = true;
         draw_surface(*paper_tex, &textures.surface_tex);
+    }
+    if(show == SHADOWS) {
+        draw_shadow_debug(textures.shadow_depth_tex, &textures.shadow_tex);
     }
     if(show >= SIMPLIFY){
         draw_simplify(textures.basic_tex, textures.color_tex,
