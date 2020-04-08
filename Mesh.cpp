@@ -23,9 +23,10 @@ MeshBuffer::MeshBuffer(std::string const &filename) {
 		glm::vec3 GeoNormal;
 		glm::vec3 ShadingNormal;
 		glm::u8vec4 Color;
+		glm::u8vec4 TexColor;
 		glm::vec2 TexCoord;
 	};
-	static_assert(sizeof(Vertex) == 3*4+3*4+3*4+4*1+2*4, "Vertex is packed.");
+	static_assert(sizeof(Vertex) == 3*4+3*4+3*4+4*2+2*4, "Vertex is packed.");
 	std::vector< Vertex > data;
 
 	//read + upload data chunk:
@@ -44,6 +45,7 @@ MeshBuffer::MeshBuffer(std::string const &filename) {
 		ShadingNormal = Attrib(buffer, 3, GL_FLOAT, Attrib::AsFloat, sizeof(Vertex), offsetof(Vertex, ShadingNormal));
 		GeoNormal = Attrib(buffer, 3, GL_FLOAT, Attrib::AsFloat, sizeof(Vertex), offsetof(Vertex, GeoNormal));
 		Color = Attrib(buffer, 4, GL_UNSIGNED_BYTE, Attrib::AsFloatFromFixedPoint, sizeof(Vertex), offsetof(Vertex, Color));
+		TexColor = Attrib(buffer, 4, GL_UNSIGNED_BYTE, Attrib::AsFloatFromFixedPoint, sizeof(Vertex), offsetof(Vertex, TexColor));
 		TexCoord = Attrib(buffer, 2, GL_FLOAT, Attrib::AsFloat, sizeof(Vertex), offsetof(Vertex, TexCoord));
 	} else {
 		throw std::runtime_error("Unknown file type '" + filename + "'");
@@ -121,6 +123,7 @@ GLuint MeshBuffer::make_vao_for_program(GLuint program) const {
 	attribs["GeoNormal"] = &GeoNormal;
 	attribs["ShadingNormal"] = &ShadingNormal;
 	attribs["Color"] = &Color;
+	attribs["TexColor"] = &TexColor;
 	attribs["TexCoord"] = &TexCoord;
 
 	return ::make_vao_for_program(attribs, program);

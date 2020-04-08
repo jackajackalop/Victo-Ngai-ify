@@ -19,6 +19,7 @@ CombineProgram::CombineProgram() {
 		//fragment shader:
 		"#version 430\n"
         "uniform sampler2D id_tex; \n"
+        "uniform sampler2D texColor_tex; \n"
         "uniform sampler2D gradient_tex; \n"
         "uniform sampler2D gradient_shadow_tex; \n"
         "uniform sampler2D gradient_toon_tex; \n"
@@ -65,8 +66,9 @@ CombineProgram::CombineProgram() {
 
         //detailing
         "   combine_out = granulated; \n"
+        "   float mat_id = texelFetch(texColor_tex, shifted_coord, 0).r;"
         "   vec4 detail = texture(detail_tex, 2*gl_FragCoord.xy/textureSize(detail_tex, 0)); \n"
-        "   if(n>50.0*TEXTURE_LIMIT) { \n"
+        "   if(mat_id > 0) { \n"
         "       combine_out = detail*detail.a+combine_out*(1.0-detail.a); \n"
         "   } \n"
 
@@ -79,13 +81,14 @@ CombineProgram::CombineProgram() {
 	glUseProgram(program); //bind program -- glUniform* calls refer to this program now
 
     glUniform1i(glGetUniformLocation(program, "id_tex"), 0);
-    glUniform1i(glGetUniformLocation(program, "gradient_tex"), 1);
-    glUniform1i(glGetUniformLocation(program, "gradient_shadow_tex"), 2);
-    glUniform1i(glGetUniformLocation(program, "gradient_toon_tex"), 3);
-    glUniform1i(glGetUniformLocation(program, "line_tex"), 4);
-    glUniform1i(glGetUniformLocation(program, "surface_tex"), 5);
-    glUniform1i(glGetUniformLocation(program, "vignette_tex"), 6);
-    glUniform1i(glGetUniformLocation(program, "detail_tex"), 7);
+    glUniform1i(glGetUniformLocation(program, "texColor_tex"), 1);
+    glUniform1i(glGetUniformLocation(program, "gradient_tex"), 2);
+    glUniform1i(glGetUniformLocation(program, "gradient_shadow_tex"), 3);
+    glUniform1i(glGetUniformLocation(program, "gradient_toon_tex"), 4);
+    glUniform1i(glGetUniformLocation(program, "line_tex"), 5);
+    glUniform1i(glGetUniformLocation(program, "surface_tex"), 6);
+    glUniform1i(glGetUniformLocation(program, "vignette_tex"), 7);
+    glUniform1i(glGetUniformLocation(program, "detail_tex"), 8);
 
 	glUseProgram(0); //unbind program -- glUniform* calls refer to ??? now
     GL_ERRORS();

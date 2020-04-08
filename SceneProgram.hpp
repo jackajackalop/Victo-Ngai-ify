@@ -16,6 +16,7 @@ struct SceneProgram {
 	GLuint GeoNormal_vec3 = -1U;
 	GLuint ShadingNormal_vec3 = -1U;
 	GLuint Color_vec4 = -1U;
+	GLuint TexColor_vec4 = -1U;
 	GLuint TexCoord_vec2 = -1U;
 
 	//Uniform (per-invocation variable) locations:
