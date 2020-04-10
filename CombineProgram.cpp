@@ -18,8 +18,10 @@ CombineProgram::CombineProgram() {
 	,
 		//fragment shader:
 		"#version 430\n"
+        "uniform sampler2D color_tex; \n"
         "uniform sampler2D id_tex; \n"
         "uniform sampler2D texColor_tex; \n"
+        "uniform sampler2D control_tex; \n"
         "uniform sampler2D gradient_tex; \n"
         "uniform sampler2D gradient_shadow_tex; \n"
         "uniform sampler2D gradient_toon_tex; \n"
@@ -46,14 +48,25 @@ CombineProgram::CombineProgram() {
         "   vec2 shift_amt = surfaceColor.gb; \n"
         "   ivec2 shifted_coord = ivec2(coord+shift_amt); \n"
 
+        "   vec4 color = texelFetch(color_tex, shifted_coord, 0); \n"
+        "   float gradient_ctrl = texelFetch(control_tex, shifted_coord, 0).r;"
         "   vec4 gradient = texelFetch(gradient_tex, shifted_coord, 0); \n"
+        "   if(gradient_ctrl>0) gradient = color; \n"
         "   vec4 gradient_shadow = texelFetch(gradient_shadow_tex, shifted_coord, 0); \n"
         "   vec4 gradient_toon = texelFetch(gradient_toon_tex, shifted_coord, 0); \n"
         "   vec4 line = texelFetch(line_tex, shifted_coord, 0); \n"
 
         "   vec4 shaded = gradient; \n"
-        "   if(gradient_toon.a>0.0) shaded = gradient_toon; \n"
-        "   if(gradient_shadow.a>0.0) shaded = gradient_shadow; \n"
+        "   if(gradient_toon.a>0.0){ \n"
+        "       shaded.r *= gradient_toon.r; \n"
+        "       shaded.g *= gradient_toon.g; \n"
+        "       shaded.b *= gradient_toon.b; \n"
+        "   } \n"
+        "   if(gradient_shadow.a>0.0){ \n"
+        "       shaded.r *= gradient_shadow.r; \n"
+        "       shaded.g *= gradient_shadow.g; \n"
+        "       shaded.b *= gradient_shadow.b; \n"
+        "   } \n"
         "   if(line.a>0.0) shaded = line; \n"
 
         //paper granulation
@@ -80,15 +93,17 @@ CombineProgram::CombineProgram() {
 	);
 	glUseProgram(program); //bind program -- glUniform* calls refer to this program now
 
-    glUniform1i(glGetUniformLocation(program, "id_tex"), 0);
-    glUniform1i(glGetUniformLocation(program, "texColor_tex"), 1);
-    glUniform1i(glGetUniformLocation(program, "gradient_tex"), 2);
-    glUniform1i(glGetUniformLocation(program, "gradient_shadow_tex"), 3);
-    glUniform1i(glGetUniformLocation(program, "gradient_toon_tex"), 4);
-    glUniform1i(glGetUniformLocation(program, "line_tex"), 5);
-    glUniform1i(glGetUniformLocation(program, "surface_tex"), 6);
-    glUniform1i(glGetUniformLocation(program, "vignette_tex"), 7);
-    glUniform1i(glGetUniformLocation(program, "detail_tex"), 8);
+    glUniform1i(glGetUniformLocation(program, "color_tex"), 0);
+    glUniform1i(glGetUniformLocation(program, "id_tex"), 1);
+    glUniform1i(glGetUniformLocation(program, "texColor_tex"), 2);
+    glUniform1i(glGetUniformLocation(program, "control_tex"), 3);
+    glUniform1i(glGetUniformLocation(program, "gradient_tex"), 4);
+    glUniform1i(glGetUniformLocation(program, "gradient_shadow_tex"), 5);
+    glUniform1i(glGetUniformLocation(program, "gradient_toon_tex"), 6);
+    glUniform1i(glGetUniformLocation(program, "line_tex"), 7);
+    glUniform1i(glGetUniformLocation(program, "surface_tex"), 8);
+    glUniform1i(glGetUniformLocation(program, "vignette_tex"), 9);
+    glUniform1i(glGetUniformLocation(program, "detail_tex"), 10);
 
 	glUseProgram(0); //unbind program -- glUniform* calls refer to ??? now
     GL_ERRORS();

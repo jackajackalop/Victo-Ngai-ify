@@ -141,6 +141,7 @@ for obj in bpy.data.objects:
     tex2 = None
     tex3 = None
     tex4 = None
+    gradient = None
 
     if len(obj.data.vertex_colors) == 0:
         print("WARNING: trying to export color data, but object '" + name + "' does not have color data; will output 0xffffffff")
@@ -154,6 +155,8 @@ for obj in bpy.data.objects:
             tex3 = obj.data.vertex_colors["Tex3"].data
         if("Tex4" in obj.data.vertex_colors):
             tex4 = obj.data.vertex_colors["Tex4"].data
+        if("Gradient" in obj.data.vertex_colors):
+            gradient = obj.data.vertex_colors["Gradient"].data
     uvs = None
     if len(obj.data.uv_layers) == 0:
         print("WARNING: trying to export texcoord data, but object '" + name + "' does not uv data; will output (0.0, 0.0)")
@@ -188,8 +191,13 @@ for obj in bpy.data.objects:
                 if tex4 != None:
                     col[3] = tex4[poly.loop_indices[i]].color[0]
                 local_data += struct.pack('BBBB', int(col[0] * 255), int(col[1] * 255), int(col[2] * 255), int(col[3] * 255))
+                col[0], col[1], col[2], col[3] = 0, 0, 0, 0
+                if(gradient != None):
+                    col[0] = gradient[poly.loop_indices[i]].color[0]
+                local_data += struct.pack('BBBB', int(col[0] * 255), int(col[1] * 255), int(col[2] * 255), int(col[3] * 255))
             else:
                 local_data += struct.pack('BBBB', 255, 255, 255, 255)
+                local_data += struct.pack('BBBB', 0, 0, 0, 0)
                 local_data += struct.pack('BBBB', 0, 0, 0, 0)
             if uvs != None:
                 uv = uvs[poly.loop_indices[i]].uv
@@ -205,7 +213,7 @@ for obj in bpy.data.objects:
 data = b''.join(data)
 
 #check that code created as much data as anticipated:
-assert(vertex_count * (4*3+4*3+3*4+4*2+4*2) == len(data))
+assert(vertex_count * (4*3+4*3+3*4+4*3+4*2) == len(data))
 
 #write the data chunk and index chunk to an output blob:
 blob = open(outfile, 'wb')
