@@ -184,8 +184,16 @@ static Load< GLuint > vignette_tex(LoadTagDefault, [](){
         return new GLuint (load_texture(data_path("textures/vignette.png")));
         });
 
-static Load< GLuint > detail_tex(LoadTagDefault, [](){
+static Load< GLuint > tex1(LoadTagDefault, [](){
         return new GLuint (load_texture(data_path("textures/wood.png")));
+        });
+
+static Load< GLuint > tex2(LoadTagDefault, [](){
+        return new GLuint (load_texture(data_path("textures/dash.png")));
+        });
+
+static Load< GLuint > tex3(LoadTagDefault, [](){
+        return new GLuint (load_texture(data_path("textures/tile.png")));
         });
 
 static Load< Scene > scene(LoadTagLate, []() -> Scene const * {
@@ -882,7 +890,11 @@ void PlantMode::draw_combine(GLuint color_tex,
     glActiveTexture(GL_TEXTURE9);
     glBindTexture(GL_TEXTURE_2D, *vignette_tex);
     glActiveTexture(GL_TEXTURE10);
-    glBindTexture(GL_TEXTURE_2D, *detail_tex);
+    glBindTexture(GL_TEXTURE_2D, *tex1);
+    glActiveTexture(GL_TEXTURE11);
+    glBindTexture(GL_TEXTURE_2D, *tex2);
+    glActiveTexture(GL_TEXTURE12);
+    glBindTexture(GL_TEXTURE_2D, *tex3);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, n_ssbo);
 
     glUseProgram(combine_program->program);
