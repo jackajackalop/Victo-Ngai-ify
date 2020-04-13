@@ -86,7 +86,7 @@ void Scene::draw(Camera const &camera, bool shadow) const {
 void Scene::draw(glm::mat4 const &world_to_clip, glm::mat4x3 const &world_to_light, bool shadow) const {
 
     //Iterate through all drawables, sending each one to OpenGL:
-    int id = 0;
+    int id = 1;
     for (auto const &drawable : drawables) {
         //Reference to drawable's pipeline for convenience:
         Scene::Drawable::Pipeline const &pipeline = drawable.pipeline;
