@@ -81,30 +81,14 @@ CombineProgram::CombineProgram() {
         "   vec4 granulated = shaded*(shaded-density_amt*Piv)+(1.0-shaded)*powed; \n"
 
         //detailing
-        "   combine_out = granulated; \n"
-        "   vec4 mat_id = texelFetch(texColor_tex, shifted_coord, 0);"
-        "   vec4 t1 = texture(tex1, 2*gl_FragCoord.xy/textureSize(tex1, 0)); \n"
-        "   vec4 t2 = texture(tex2, 6*gl_FragCoord.xy/textureSize(tex2, 0)); \n"
-        "   vec4 t3 = texture(tex3, 10*gl_FragCoord.xy/textureSize(tex3, 0)); \n"
-        "   vec4 t4 = texture(tex4, 5*gl_FragCoord.xy/textureSize(tex4, 0)); \n"
-        "   if(mat_id.r > 0) { \n"
-        "       combine_out = t1*t1.a+combine_out*(1.0-t1.a); \n"
-        "   } \n"
-        "   if(mat_id.g > 0) { \n"
-        "       combine_out = t2*t2.a+combine_out*(1.0-t2.a); \n"
-        "   } \n"
-        "   if(mat_id.b > 0) { \n"
-        "       combine_out = t3*t3.a+combine_out*(1.0-t3.a); \n"
-        "   } \n"
-        "   if(mat_id.a > 0) { \n"
-        "       combine_out = t4*t4.a+combine_out*(1.0-t4.a); \n"
-        "   } \n"
+        "   vec4 texColor = texelFetch(texColor_tex, ivec2(gl_FragCoord.xy), 0);"
+        "   combine_out = texColor*texColor.a+granulated*(1.0-texColor.a); \n"
 
         //vignette
         "   vec2 tex_coord = gl_FragCoord.xy/textureSize(surface_tex, 0); \n"
         "   vec4 vignette = texture(vignette_tex, tex_coord); \n"
         "   combine_out = vignette*vignette.a+combine_out*(1.0-vignette.a); \n"
-		"}\n"
+        "}\n"
 	);
 	glUseProgram(program); //bind program -- glUniform* calls refer to this program now
 
@@ -118,10 +102,6 @@ CombineProgram::CombineProgram() {
     glUniform1i(glGetUniformLocation(program, "line_tex"), 7);
     glUniform1i(glGetUniformLocation(program, "surface_tex"), 8);
     glUniform1i(glGetUniformLocation(program, "vignette_tex"), 9);
-    glUniform1i(glGetUniformLocation(program, "tex1"), 10);
-    glUniform1i(glGetUniformLocation(program, "tex2"), 11);
-    glUniform1i(glGetUniformLocation(program, "tex3"), 12);
-    glUniform1i(glGetUniformLocation(program, "tex4"), 13);
 
 	glUseProgram(0); //unbind program -- glUniform* calls refer to ??? now
     GL_ERRORS();

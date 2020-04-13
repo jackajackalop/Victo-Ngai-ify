@@ -498,6 +498,14 @@ void PlantMode::draw_scene(GLuint shadow_depth_tex, GLuint *basic_tex_,
     glBindTexture(GL_TEXTURE_3D, *toon_lut_tex);
     glActiveTexture(GL_TEXTURE3);
     glBindTexture(GL_TEXTURE_3D, *shadow_lut_tex);
+    glActiveTexture(GL_TEXTURE4);
+    glBindTexture(GL_TEXTURE_2D, *tex1);
+    glActiveTexture(GL_TEXTURE5);
+    glBindTexture(GL_TEXTURE_2D, *tex2);
+    glActiveTexture(GL_TEXTURE6);
+    glBindTexture(GL_TEXTURE_2D, *tex3);
+    glActiveTexture(GL_TEXTURE7);
+    glBindTexture(GL_TEXTURE_2D, *tex4);
     glUseProgram(scene_program->program);
 
     glm::mat4 spot_to_world = spot->transform->make_local_to_world();
@@ -893,14 +901,6 @@ void PlantMode::draw_combine(GLuint color_tex,
     glBindTexture(GL_TEXTURE_2D, surface_tex);
     glActiveTexture(GL_TEXTURE9);
     glBindTexture(GL_TEXTURE_2D, *vignette_tex);
-    glActiveTexture(GL_TEXTURE10);
-    glBindTexture(GL_TEXTURE_2D, *tex1);
-    glActiveTexture(GL_TEXTURE11);
-    glBindTexture(GL_TEXTURE_2D, *tex2);
-    glActiveTexture(GL_TEXTURE12);
-    glBindTexture(GL_TEXTURE_2D, *tex3);
-    glActiveTexture(GL_TEXTURE13);
-    glBindTexture(GL_TEXTURE_2D, *tex4);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, n_ssbo);
 
     glUseProgram(combine_program->program);

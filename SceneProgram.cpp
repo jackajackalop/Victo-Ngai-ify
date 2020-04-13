@@ -60,6 +60,10 @@ SceneProgram::SceneProgram() {
         "uniform sampler3D lut_tex; \n"
         "uniform sampler3D toon_lut_tex; \n"
         "uniform sampler3D shadow_lut_tex; \n"
+        "uniform sampler2D tex1; \n"
+        "uniform sampler2D tex2; \n"
+        "uniform sampler2D tex3; \n"
+        "uniform sampler2D tex4; \n"
         "uniform int lut_size; \n"
         "uniform vec3 spot_position; \n"
         "uniform int id; \n"
@@ -82,7 +86,7 @@ SceneProgram::SceneProgram() {
 
 		"void main() {\n"
         "   normal_out = vec4(geoNormal, 1.0); \n"
-        "   texColor_out = texColor; \n"
+        "   texColor_out = vec4(0,0,0,0); \n"
         "   control_out = controlColor; \n"
         "   float id_color = float(id)/255.0; \n"
         "   id_out = vec4(id_color, id_color, id_color, 1.0); \n"
@@ -112,7 +116,27 @@ SceneProgram::SceneProgram() {
          //toon shading
          "  if(nl<0.3) toon_out = vec4(toon_lut_color, 1.0); \n"
          "  else toon_out = vec4(0.0, 0.0, 0.0, 0.0); \n"
-		"}\n"
+
+        //detailing
+        "   vec4 mat_id = texColor;"
+        "   vec4 t1 = texture(tex1, 2*gl_FragCoord.xy/textureSize(tex1, 0)); \n"
+        "   vec4 t2 = texture(tex2, 6*gl_FragCoord.xy/textureSize(tex2, 0)); \n"
+        "   vec4 t3 = texture(tex3, 10*gl_FragCoord.xy/textureSize(tex3, 0)); \n"
+        "   vec4 t4 = texture(tex4, 5*gl_FragCoord.xy/textureSize(tex4, 0)); \n"
+        "   if(mat_id.r > 0) { \n"
+        "       texColor_out = t1*t1.a+texColor_out*(1.0-t1.a); \n"
+        "   } \n"
+        "   if(mat_id.g > 0) { \n"
+        "       texColor_out = t2*t2.a+texColor_out*(1.0-t2.a); \n"
+        "   } \n"
+        "   if(mat_id.b > 0) { \n"
+        "       texColor_out = t3*t3.a+texColor_out*(1.0-t3.a); \n"
+        "   } \n"
+        "   if(mat_id.a > 0) { \n"
+        "       texColor_out = t4*t4.a+texColor_out*(1.0-t4.a); \n"
+        "   } \n"
+        "} \n"
+
 	);
 	//As you can see above, adjacent strings in C/C++ are concatenated.
 	// this is very useful for writing long shader programs inline.
@@ -140,6 +164,10 @@ SceneProgram::SceneProgram() {
 	glUniform1i(glGetUniformLocation(program, "lut_tex"), 1);
 	glUniform1i(glGetUniformLocation(program, "toon_lut_tex"), 2);
 	glUniform1i(glGetUniformLocation(program, "shadow_lut_tex"), 3);
+	glUniform1i(glGetUniformLocation(program, "tex1"), 4);
+	glUniform1i(glGetUniformLocation(program, "tex2"), 5);
+	glUniform1i(glGetUniformLocation(program, "tex3"), 6);
+	glUniform1i(glGetUniformLocation(program, "tex4"), 7);
 
 	glUseProgram(0); //unbind program -- glUniform* calls refer to ??? now
 }
