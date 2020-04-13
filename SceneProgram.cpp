@@ -119,10 +119,10 @@ SceneProgram::SceneProgram() {
 
         //detailing
         "   vec4 mat_id = texColor;"
-        "   vec4 t1 = texture(tex1, 2*gl_FragCoord.xy/textureSize(tex1, 0)); \n"
-        "   vec4 t2 = texture(tex2, 6*gl_FragCoord.xy/textureSize(tex2, 0)); \n"
-        "   vec4 t3 = texture(tex3, 10*gl_FragCoord.xy/textureSize(tex3, 0)); \n"
-        "   vec4 t4 = texture(tex4, 5*gl_FragCoord.xy/textureSize(tex4, 0)); \n"
+        "   vec4 t1 = texture(tex1, 4*texCoord);"
+        "   vec4 t2 = texture(tex2, 20*texCoord); \n"
+        "   vec4 t3 = texture(tex3, 50*texCoord); \n"
+        "   vec4 t4 = texture(tex4, 10*texCoord); \n"
         "   if(mat_id.r > 0) { \n"
         "       texColor_out = t1*t1.a+texColor_out*(1.0-t1.a); \n"
         "   } \n"
