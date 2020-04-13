@@ -196,6 +196,10 @@ static Load< GLuint > tex3(LoadTagDefault, [](){
         return new GLuint (load_texture(data_path("textures/tile.png")));
         });
 
+static Load< GLuint > tex4(LoadTagDefault, [](){
+        return new GLuint (load_texture(data_path("textures/flowers.png")));
+        });
+
 static Load< Scene > scene(LoadTagLate, []() -> Scene const * {
         Scene *ret = new Scene();
         ret->load(data_path("shower.scene"), [](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
@@ -895,6 +899,8 @@ void PlantMode::draw_combine(GLuint color_tex,
     glBindTexture(GL_TEXTURE_2D, *tex2);
     glActiveTexture(GL_TEXTURE12);
     glBindTexture(GL_TEXTURE_2D, *tex3);
+    glActiveTexture(GL_TEXTURE13);
+    glBindTexture(GL_TEXTURE_2D, *tex4);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, n_ssbo);
 
     glUseProgram(combine_program->program);
