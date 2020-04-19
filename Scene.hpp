@@ -24,7 +24,9 @@
 #include <vector>
 #include <unordered_map>
 
+#include <map>
 struct Scene {
+
 	struct Transform {
 		//Transform names are useful for debugging and looking up locations in a loaded scene:
 		std::string name;
@@ -131,6 +133,8 @@ struct Scene {
 	std::list< Drawable > drawables;
 	std::list< Camera > cameras;
 	std::list< Light > lights;
+    mutable const Camera *cam;
+    mutable std::map<float, const Drawable *> sorted;
 
 	//The "draw" function provides a convenient way to pass all the things in a scene to OpenGL:
 	void draw(Camera const &camera, bool shadow = false, bool transp = false) const;

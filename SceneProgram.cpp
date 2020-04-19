@@ -89,7 +89,7 @@ SceneProgram::SceneProgram() {
         "   texColor_out = vec4(0,0,0,0); \n"
         "   control_out = controlColor; \n"
         "   float id_color = float(id)/255.0; \n"
-        "   id_out = vec4(id_color, id_color, id_color, 1.0); \n"
+        "   if(id!=-1) id_out = vec4(id_color, id_color, id_color, 1.0); \n"
 		"	vec3 n = normalize(shadingNormal);\n"
 		"	vec4 albedo = color;\n"
         "   vec3 light = vec3(0.0, 0.0, 0.0); \n"
@@ -111,7 +111,7 @@ SceneProgram::SceneProgram() {
         "   color_out = vec4(lut_color, 1.0); \n"
 
          //shadow color
-        "   if(nl>0.01 && shadow<0.01) shadow_out = vec4(shadow_lut_color, 1.0); \n"
+//        "   if(nl>0.01 && shadow<0.01) shadow_out = vec4(shadow_lut_color, 1.0); \n"
 
          //toon shading
          "  if(nl<0.22) toon_out = vec4(toon_lut_color, 1.0); \n"
@@ -244,7 +244,7 @@ TranspProgram::TranspProgram() {
         "   transp_color_out = vec4(0, 0, 0, 0); \n"
         "   if(controlColor.g>0.5){ \n"
         "       transp_color_out = color; \n"
-        "       transp_color_out.a = 0.5; \n"
+        "       transp_color_out.a = 0.75; \n"
         "   } \n"
         "} \n"
 	);

@@ -80,21 +80,20 @@ glm::mat4 Scene::Camera::make_projection() const {
 void Scene::draw(Camera const &camera, bool shadow, bool transp) const {
     glm::mat4 world_to_clip = camera.make_projection() * camera.transform->make_world_to_local();
     glm::mat4x3 world_to_light = glm::mat4x3(1.0f);
+    cam = &camera;
     draw(world_to_clip, world_to_light, shadow, transp);
 }
 
-std::map<float, const Scene::Drawable *> sorted;
 
 void Scene::draw(glm::mat4 const &world_to_clip, glm::mat4x3 const &world_to_light, bool shadow, bool transp) const {
 
     //Iterate through all drawables, sending each one to OpenGL:
     int id = 1;
     if(transp){
-        id = drawables.size();
- //       for (std::map<float, const scene::drawable *>::reverse_iterator it = sorted.rbegin(); it != sorted.rend(); ++it) {
-        for (auto const &drawable : drawables) {
+        for (std::map<float, const Scene::Drawable *>::reverse_iterator it = sorted.rbegin(); it != sorted.rend(); ++it) {
+            id = -1;
             //reference to drawable's pipeline for convenience:
-            Scene::Drawable::Pipeline const &pipeline = drawable.pipeline;
+            Scene::Drawable::Pipeline const &pipeline = it->second->pipeline;
 
             //skip any drawables without a shader program set:
             if (pipeline.program == 0) continue;
@@ -109,8 +108,8 @@ void Scene::draw(glm::mat4 const &world_to_clip, glm::mat4x3 const &world_to_lig
             //Configure program uniforms:
 
             //the object-to-world matrix is used in all three of these uniforms:
-            assert(drawable.transform); //drawables *must* have a transform
-            glm::mat4 object_to_world = drawable.transform->make_local_to_world();
+            assert(it->second->transform); //drawables *must* have a transform
+            glm::mat4 object_to_world = it->second->transform->make_local_to_world();
 
             //OBJECT_TO_CLIP takes vertices from object space to clip space:
             glm::mat4 object_to_clip = world_to_clip * object_to_world;
@@ -142,7 +141,7 @@ void Scene::draw(glm::mat4 const &world_to_clip, glm::mat4x3 const &world_to_lig
         }
     } else {
 
-        for (auto const &drawable : drawables) {
+        for (auto &drawable : drawables) {
             //Reference to drawable's pipeline for convenience:
             Scene::Drawable::Pipeline const &pipeline = drawable.pipeline;
 
@@ -170,7 +169,7 @@ void Scene::draw(glm::mat4 const &world_to_clip, glm::mat4x3 const &world_to_lig
                 }
 
             }else {
-                float distance = glm::length(drawable.transform->position-glm::vec3(0.0));
+                float distance = (cam->transform->make_world_to_local()*(drawable.transform->make_local_to_world()*glm::vec4(0.0, 0.0, 0.0, 1.0))).z;
                 sorted[distance] = &drawable;
                 glUseProgram(pipeline.program);
 
