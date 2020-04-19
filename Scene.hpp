@@ -120,7 +120,7 @@ struct Scene {
 		//near and far planes for shadow maps:
 		float aspect = 1.0f;
 		float near = 0.1f;
-		float far = 20.0f;
+		float far = 25.0f;
 
 		//computed from the above:
 		glm::mat4 make_projection() const;
@@ -133,10 +133,10 @@ struct Scene {
 	std::list< Light > lights;
 
 	//The "draw" function provides a convenient way to pass all the things in a scene to OpenGL:
-	void draw(Camera const &camera, bool shadow = false) const;
+	void draw(Camera const &camera, bool shadow = false, bool transp = false) const;
 
 	//..sometimes, you want to draw with a custom projection matrix and/or light space:
-	void draw(glm::mat4 const &world_to_clip, glm::mat4x3 const &world_to_light = glm::mat4x3(1.0f), bool shadow = false) const;
+	void draw(glm::mat4 const &world_to_clip, glm::mat4x3 const &world_to_light = glm::mat4x3(1.0f), bool shadow = false, bool transp = false) const;
 
 	//add transforms/objects/cameras from a scene file to this scene:
 	// the 'on_drawable' callback gives your code a chance to look up mesh data and make Drawables:
@@ -156,4 +156,5 @@ struct Scene {
 	Scene &operator=(Scene const &); //...as scene = scene
 	//... as a set() function that optionally returns the transform->transform mapping:
 	void set(Scene const &, std::unordered_map< Transform const *, Transform * > *transform_map = nullptr);
+
 };

@@ -114,7 +114,7 @@ SceneProgram::SceneProgram() {
         "   if(nl>0.01 && shadow<0.01) shadow_out = vec4(shadow_lut_color, 1.0); \n"
 
          //toon shading
-         "  if(nl<0.3) toon_out = vec4(toon_lut_color, 1.0); \n"
+         "  if(nl<0.22) toon_out = vec4(toon_lut_color, 1.0); \n"
          "  else toon_out = vec4(0.0, 0.0, 0.0, 0.0); \n"
 
         //detailing
@@ -135,8 +135,12 @@ SceneProgram::SceneProgram() {
         "   if(mat_id.a > 0) { \n"
         "       texColor_out = t4*t4.a+texColor_out*(1.0-t4.a); \n"
         "   } \n"
-        "} \n"
 
+        //transparency
+        "   if(controlColor.g>0.0) { \n"
+        "       discard;"
+        "   } \n"
+        "} \n"
 	);
 	//As you can see above, adjacent strings in C/C++ are concatenated.
 	// this is very useful for writing long shader programs inline.
@@ -145,6 +149,7 @@ SceneProgram::SceneProgram() {
 	Position_vec4 = glGetAttribLocation(program, "Position");
 	ShadingNormal_vec3 = glGetAttribLocation(program, "ShadingNormal");
 	GeoNormal_vec3 = glGetAttribLocation(program, "GeoNormal");
+	ControlColor_vec4 = glGetAttribLocation(program, "ControlColor");
 	Color_vec4 = glGetAttribLocation(program, "Color");
 	TexCoord_vec2 = glGetAttribLocation(program, "TexCoord");
 
@@ -173,6 +178,103 @@ SceneProgram::SceneProgram() {
 }
 
 SceneProgram::~SceneProgram() {
+	glDeleteProgram(program);
+	program = 0;
+}
+
+Load< TranspProgram > transp_program(LoadTagEarly, []() -> TranspProgram const * {
+	TranspProgram *ret = new TranspProgram();
+	return ret;
+});
+
+
+TranspProgram::TranspProgram() {
+	//Compile vertex and fragment shaders using the convenient 'gl_compile_program' helper function:
+	program = gl_compile_program(
+		//vertex shader:
+		"#version 330\n"
+        "uniform mat4 OBJECT_TO_CLIP;\n"
+		"uniform mat4x3 OBJECT_TO_LIGHT;\n"
+		"uniform mat3 NORMAL_TO_LIGHT;\n"
+        "uniform mat4 LIGHT_TO_SPOT;\n"
+		"in vec4 Position;\n"
+		"in vec3 GeoNormal;\n"
+		"in vec3 ShadingNormal;\n"
+		"in vec4 Color;\n"
+		"in vec4 TexColor;\n"
+		"in vec4 ControlColor;\n"
+		"in vec2 TexCoord;\n"
+		"out vec3 position;\n"
+		"out vec3 shadingNormal;\n"
+		"out vec3 geoNormal;\n"
+		"out vec4 color;\n"
+		"out vec4 texColor;\n"
+		"out vec4 controlColor;\n"
+		"out vec2 texCoord;\n"
+		"out vec4 shadowCoord;\n"
+		"void main() {\n"
+		"	gl_Position = OBJECT_TO_CLIP * Position;\n"
+		"	position = OBJECT_TO_LIGHT * Position;\n"
+		"	shadingNormal = NORMAL_TO_LIGHT * ShadingNormal;\n"
+		"	geoNormal = GeoNormal;\n"
+		"	color = Color;\n"
+		"	texColor = TexColor;\n"
+		"	controlColor = ControlColor;\n"
+		"	texCoord = TexCoord;\n"
+        "   shadowCoord = LIGHT_TO_SPOT * vec4(position, 1.0); \n"
+		"}\n"
+	,
+
+		//fragment shader:
+		"#version 330\n"
+        "uniform sampler3D lut_tex; \n"
+        "uniform int lut_size; \n"
+        "uniform int id; \n"
+		"in vec3 position;\n"
+		"in vec3 geoNormal;\n"
+		"in vec3 shadingNormal;\n"
+		"in vec4 color;\n"
+		"in vec4 texColor;\n"
+		"in vec4 controlColor;\n"
+		"in vec2 texCoord;\n"
+        "in vec4 shadowCoord; \n"
+		"layout(location=0) out vec4 transp_color_out;\n"
+
+		"void main() {\n"
+        "   transp_color_out = vec4(0, 0, 0, 0); \n"
+        "   if(controlColor.g>0.5){ \n"
+        "       transp_color_out = color; \n"
+        "       transp_color_out.a = 0.5; \n"
+        "   } \n"
+        "} \n"
+	);
+	//As you can see above, adjacent strings in C/C++ are concatenated.
+	// this is very useful for writing long shader programs inline.
+
+	//look up the locations of vertex attributes:
+	Position_vec4 = glGetAttribLocation(program, "Position");
+	ShadingNormal_vec3 = glGetAttribLocation(program, "ShadingNormal");
+	GeoNormal_vec3 = glGetAttribLocation(program, "GeoNormal");
+	ControlColor_vec4 = glGetAttribLocation(program, "ControlColor");
+	Color_vec4 = glGetAttribLocation(program, "Color");
+	TexCoord_vec2 = glGetAttribLocation(program, "TexCoord");
+
+	//look up the locations of uniforms:
+	OBJECT_TO_CLIP = glGetUniformLocation(program, "OBJECT_TO_CLIP");
+	OBJECT_TO_LIGHT = glGetUniformLocation(program, "OBJECT_TO_LIGHT");
+	NORMAL_TO_LIGHT = glGetUniformLocation(program, "NORMAL_TO_LIGHT");
+	LIGHT_TO_SPOT = glGetUniformLocation(program, "LIGHT_TO_SPOT");
+	spot_position = glGetUniformLocation(program, "spot_position");
+    lut_size = glGetUniformLocation(program, "lut_size");
+    id = glGetUniformLocation(program, "id");
+
+	//set TEX to always refer to texture binding zero:
+	glUseProgram(program); //bind program -- glUniform* calls refer to this program now
+
+	glUseProgram(0); //unbind program -- glUniform* calls refer to ??? now
+}
+
+TranspProgram::~TranspProgram() {
 	glDeleteProgram(program);
 	program = 0;
 }

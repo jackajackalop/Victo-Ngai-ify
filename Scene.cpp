@@ -8,6 +8,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/string_cast.hpp>
 
+#include <map>
 #include <fstream>
 
 //-------------------------
@@ -67,7 +68,7 @@ glm::mat4 Scene::Transform::make_world_to_local() const {
 
 glm::mat4 Scene::Light::make_projection() const {
     return glm::perspective( fov, aspect, near, far);
-//    return glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, aspect, near );
+    //    return glm::ortho(-10.0f, 10.0f, -10.0f, 10.0f, aspect, near );
 }
 
 glm::mat4 Scene::Camera::make_projection() const {
@@ -76,47 +77,32 @@ glm::mat4 Scene::Camera::make_projection() const {
 
 //-------------------------
 
-void Scene::draw(Camera const &camera, bool shadow) const {
-    assert(camera.transform);
+void Scene::draw(Camera const &camera, bool shadow, bool transp) const {
     glm::mat4 world_to_clip = camera.make_projection() * camera.transform->make_world_to_local();
     glm::mat4x3 world_to_light = glm::mat4x3(1.0f);
-    draw(world_to_clip, world_to_light, shadow);
+    draw(world_to_clip, world_to_light, shadow, transp);
 }
 
-void Scene::draw(glm::mat4 const &world_to_clip, glm::mat4x3 const &world_to_light, bool shadow) const {
+std::map<float, const Scene::Drawable *> sorted;
+
+void Scene::draw(glm::mat4 const &world_to_clip, glm::mat4x3 const &world_to_light, bool shadow, bool transp) const {
 
     //Iterate through all drawables, sending each one to OpenGL:
     int id = 1;
-    for (auto const &drawable : drawables) {
-        //Reference to drawable's pipeline for convenience:
-        Scene::Drawable::Pipeline const &pipeline = drawable.pipeline;
+    if(transp){
+        id = drawables.size();
+ //       for (std::map<float, const scene::drawable *>::reverse_iterator it = sorted.rbegin(); it != sorted.rend(); ++it) {
+        for (auto const &drawable : drawables) {
+            //reference to drawable's pipeline for convenience:
+            Scene::Drawable::Pipeline const &pipeline = drawable.pipeline;
 
-        //skip any drawables without a shader program set:
-        if (pipeline.program == 0) continue;
-        //skip any drawables that don't contain any vertices:
-        if (pipeline.count == 0) continue;
+            //skip any drawables without a shader program set:
+            if (pipeline.program == 0) continue;
+            //skip any drawables that don't contain any vertices:
+            if (pipeline.count == 0) continue;
+            glUseProgram(transp_program->program);
 
-
-        //Set shader program:
-        if(shadow){
-            glUseProgram(shadow_program->program);
-
-            //Set attribute sources:
-            glBindVertexArray(pipeline.vao);
-
-            //the object-to-world matrix is used in all three of these uniforms:
-            assert(drawable.transform); //drawables *must* have a transform
-            glm::mat4 object_to_world = drawable.transform->make_local_to_world();
-
-            //OBJECT_TO_CLIP takes vertices from object space to clip space:
-            if (pipeline.OBJECT_TO_CLIP_mat4 != -1U) {
-                glm::mat4 object_to_clip = world_to_clip * object_to_world;
-                glUniformMatrix4fv(shadow_program->OBJECT_TO_CLIP_mat4, 1, GL_FALSE, glm::value_ptr(object_to_clip));
-            }
-
-        }else{
-            glUseProgram(pipeline.program);
-
+            glEnable(GL_DEPTH_TEST);
             //Set attribute sources:
             glBindVertexArray(pipeline.vao);
 
@@ -127,43 +113,115 @@ void Scene::draw(glm::mat4 const &world_to_clip, glm::mat4x3 const &world_to_lig
             glm::mat4 object_to_world = drawable.transform->make_local_to_world();
 
             //OBJECT_TO_CLIP takes vertices from object space to clip space:
-            if (pipeline.OBJECT_TO_CLIP_mat4 != -1U) {
-                glm::mat4 object_to_clip = world_to_clip * object_to_world;
-                glUniformMatrix4fv(pipeline.OBJECT_TO_CLIP_mat4, 1, GL_FALSE, glm::value_ptr(object_to_clip));
-            }
+            glm::mat4 object_to_clip = world_to_clip * object_to_world;
+            glUniformMatrix4fv(transp_program->OBJECT_TO_CLIP, 1, GL_FALSE, glm::value_ptr(object_to_clip));
 
             //the object-to-light matrix is used in the next two uniforms:
             glm::mat4x3 object_to_light = world_to_light * object_to_world;
 
             //OBJECT_TO_CLIP takes vertices from object space to light space:
-            if (pipeline.OBJECT_TO_LIGHT_mat4x3 != -1U) {
-                glUniformMatrix4x3fv(pipeline.OBJECT_TO_LIGHT_mat4x3, 1, GL_FALSE, glm::value_ptr(object_to_light));
-            }
-
+            glUniformMatrix4x3fv(transp_program->OBJECT_TO_LIGHT, 1, GL_FALSE, glm::value_ptr(object_to_light));
             //NORMAL_TO_CLIP takes normals from object space to light space:
-            if (pipeline.NORMAL_TO_LIGHT_mat3 != -1U) {
-                glm::mat3 normal_to_light = glm::inverse(glm::transpose(glm::mat3(object_to_light)));
-                glUniformMatrix3fv(pipeline.NORMAL_TO_LIGHT_mat3, 1, GL_FALSE, glm::value_ptr(normal_to_light));
-            }
+            glm::mat3 normal_to_light = glm::inverse(glm::transpose(glm::mat3(object_to_light)));
+            glUniformMatrix3fv(transp_program->NORMAL_TO_LIGHT, 1, GL_FALSE, glm::value_ptr(normal_to_light));
 
-            //set any requested custom uniforms:
-            if (pipeline.set_uniforms) pipeline.set_uniforms();
-            glUniform1i(scene_program->id, id);
+            glUniform1i(transp_program->id, id);
             id++;
-        }
 
-        //draw the object:
-        glDrawArrays(pipeline.type, pipeline.start, pipeline.count);
+            //draw the object:
+            glDrawArrays(pipeline.type, pipeline.start, pipeline.count);
 
-        //un-bind textures:
-        for (uint32_t i = 0; i < Drawable::Pipeline::TextureCount; ++i) {
-            if (pipeline.textures[i].texture != 0) {
-                glActiveTexture(GL_TEXTURE0 + i);
-                glBindTexture(pipeline.textures[i].target, 0);
+            //un-bind textures:
+            for (uint32_t i = 0; i < Drawable::Pipeline::TextureCount; ++i) {
+                if (pipeline.textures[i].texture != 0) {
+                    glActiveTexture(GL_TEXTURE0 + i);
+                    glBindTexture(pipeline.textures[i].target, 0);
+                }
             }
+            glActiveTexture(GL_TEXTURE0);
         }
-        glActiveTexture(GL_TEXTURE0);
+    } else {
 
+        for (auto const &drawable : drawables) {
+            //Reference to drawable's pipeline for convenience:
+            Scene::Drawable::Pipeline const &pipeline = drawable.pipeline;
+
+            //skip any drawables without a shader program set:
+            if (pipeline.program == 0) continue;
+            //skip any drawables that don't contain any vertices:
+            if (pipeline.count == 0) continue;
+
+
+            //Set shader program:
+            if(shadow){
+                glUseProgram(shadow_program->program);
+
+                //Set attribute sources:
+                glBindVertexArray(pipeline.vao);
+
+                //the object-to-world matrix is used in all three of these uniforms:
+                assert(drawable.transform); //drawables *must* have a transform
+                glm::mat4 object_to_world = drawable.transform->make_local_to_world();
+
+                //OBJECT_TO_CLIP takes vertices from object space to clip space:
+                if (pipeline.OBJECT_TO_CLIP_mat4 != -1U) {
+                    glm::mat4 object_to_clip = world_to_clip * object_to_world;
+                    glUniformMatrix4fv(shadow_program->OBJECT_TO_CLIP_mat4, 1, GL_FALSE, glm::value_ptr(object_to_clip));
+                }
+
+            }else {
+                float distance = glm::length(drawable.transform->position-glm::vec3(0.0));
+                sorted[distance] = &drawable;
+                glUseProgram(pipeline.program);
+
+                //Set attribute sources:
+                glBindVertexArray(pipeline.vao);
+
+                //Configure program uniforms:
+
+                //the object-to-world matrix is used in all three of these uniforms:
+                assert(drawable.transform); //drawables *must* have a transform
+                glm::mat4 object_to_world = drawable.transform->make_local_to_world();
+
+                //OBJECT_TO_CLIP takes vertices from object space to clip space:
+                if (pipeline.OBJECT_TO_CLIP_mat4 != -1U) {
+                    glm::mat4 object_to_clip = world_to_clip * object_to_world;
+                    glUniformMatrix4fv(pipeline.OBJECT_TO_CLIP_mat4, 1, GL_FALSE, glm::value_ptr(object_to_clip));
+                }
+
+                //the object-to-light matrix is used in the next two uniforms:
+                glm::mat4x3 object_to_light = world_to_light * object_to_world;
+
+                //OBJECT_TO_CLIP takes vertices from object space to light space:
+                if (pipeline.OBJECT_TO_LIGHT_mat4x3 != -1U) {
+                    glUniformMatrix4x3fv(pipeline.OBJECT_TO_LIGHT_mat4x3, 1, GL_FALSE, glm::value_ptr(object_to_light));
+                }
+
+                //NORMAL_TO_CLIP takes normals from object space to light space:
+                if (pipeline.NORMAL_TO_LIGHT_mat3 != -1U) {
+                    glm::mat3 normal_to_light = glm::inverse(glm::transpose(glm::mat3(object_to_light)));
+                    glUniformMatrix3fv(pipeline.NORMAL_TO_LIGHT_mat3, 1, GL_FALSE, glm::value_ptr(normal_to_light));
+                }
+
+                //set any requested custom uniforms:
+                if (pipeline.set_uniforms) pipeline.set_uniforms();
+                glUniform1i(scene_program->id, id);
+                id++;
+            }
+
+            //draw the object:
+            glDrawArrays(pipeline.type, pipeline.start, pipeline.count);
+
+            //un-bind textures:
+            for (uint32_t i = 0; i < Drawable::Pipeline::TextureCount; ++i) {
+                if (pipeline.textures[i].texture != 0) {
+                    glActiveTexture(GL_TEXTURE0 + i);
+                    glBindTexture(pipeline.textures[i].target, 0);
+                }
+            }
+            glActiveTexture(GL_TEXTURE0);
+
+        }
     }
 
     glUseProgram(0);

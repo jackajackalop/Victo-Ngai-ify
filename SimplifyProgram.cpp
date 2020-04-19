@@ -101,6 +101,7 @@ SimplifyProgram::SimplifyProgram() {
 		//fragment shader:
 		"#version 430\n"
         "uniform sampler2D color_tex; \n"
+        "uniform sampler2D transp_color_tex; \n"
         "uniform sampler2D shadow_tex; \n"
         "uniform sampler2D toon_tex; \n"
         "uniform sampler2D id_tex; \n"
@@ -131,7 +132,7 @@ SimplifyProgram::SimplifyProgram() {
 		"layout(location=3) out vec4 line_out;\n"
 
         "int lod = 0; \n"
-        "vec3 line_color = vec3(0, 0, 0); \n"
+        "vec4 line_color = vec4(0, 0, 0, 0); \n"
 
         "float unpack_float(uint v){ \n"
         "   return float(v)/4096.0; \n"
@@ -164,7 +165,14 @@ SimplifyProgram::SimplifyProgram() {
         "   int idr = 3*int(texelFetch(id_tex, c+ivec2(1, 0), lod).r*255); \n"
         "   int idu = 3*int(texelFetch(id_tex, c+ivec2(0, 1), lod).r*255); \n"
         "   int idd = 3*int(texelFetch(id_tex, c+ivec2(0, -1), lod).r*255); \n"
-        "   return !(id==idl && id==idr && id==idu && id==idd);"
+        "   float tid = texelFetch(transp_color_tex, c, lod).r; \n"
+        "   float tidl = texelFetch(transp_color_tex, c+ivec2(-1, 0), lod).r; \n"
+        "   float tidr = texelFetch(transp_color_tex, c+ivec2(1, 0), lod).r; \n"
+        "   float tidu = texelFetch(transp_color_tex, c+ivec2(0, 1), lod).r; \n"
+        "   float tidd = texelFetch(transp_color_tex, c+ivec2(0, -1), lod).r; \n"
+        "   bool opaque_line = !(id==idl && id==idr && id==idu && id==idd); \n"
+        "   bool transp_line = !(tid==tidl && tid==tidr && tid==tidu && tid==tidd); \n"
+        "   return opaque_line || transp_line; \n"
         "} \n"
 
         //referenced this https://roystan.net/articles/outline-shader.html
@@ -176,10 +184,19 @@ SimplifyProgram::SimplifyProgram() {
         "   float d2 = texelFetch(depth_tex, c+ivec2(-1, -1), lod).r; \n"
         "   float d3 = texelFetch(depth_tex, c+ivec2(-1, 1), lod).r; \n"
         "   float mind = min(d0, min(d1, min(d2, d3))); \n"
-        "   if(mind == d0) line_color = texelFetch(color_tex, c+ivec2(1, -1), lod).rgb; \n"
-        "   if(mind == d1) line_color = texelFetch(color_tex, c+ivec2(1, 1), lod).rgb; \n"
-        "   if(mind == d2) line_color = texelFetch(color_tex, c+ivec2(-1, -1), lod).rgb; \n"
-        "   if(mind == d3) line_color = texelFetch(color_tex, c+ivec2(-1, 1), lod).rgb; \n"
+        "   if(mind == d0) { \n"
+        "       line_color = texelFetch(transp_color_tex, c+ivec2(1, -1), lod); \n"
+        "       if(line_color.a==0) line_color = texelFetch(color_tex, c+ivec2(1, -1), lod); \n"
+        "   } else if(mind == d1) {\n "
+        "       line_color = texelFetch(transp_color_tex, c+ivec2(1, 1), lod); \n"
+        "       if(line_color.a==0) line_color = texelFetch(color_tex, c+ivec2(1, 1), lod); \n"
+        "   } else if(mind == d2) {\n "
+        "       line_color = texelFetch(transp_color_tex, c+ivec2(-1, -1), lod); \n"
+        "       if(line_color.a==0) line_color = texelFetch(color_tex, c+ivec2(-1, -1), lod); \n"
+        "   } else if(mind == d3) { \n"
+        "       line_color = texelFetch(transp_color_tex, c+ivec2(-1, 1), lod); \n"
+        "       if(line_color.a==0) line_color = texelFetch(color_tex, c+ivec2(-1, 1), lod); \n"
+        "   } \n"
 
         "   float ddif0 = d1-d0; \n"
         "   float ddif1 = d3-d2; \n"
@@ -293,8 +310,8 @@ SimplifyProgram::SimplifyProgram() {
         "   if(depthCheck(coord)||boundaryCheck(coord)||normalCheck(coord)){ \n"
         "       vec3 scale = vec3(lut_size - 1.0)/lut_size; \n"
         "       vec3 offset = vec3(1.0/(2.0*lut_size)); \n"
-        "       line_color = texture(line_lut_tex, scale*line_color+offset).rgb; \n"
-        "       line_out = vec4(line_color, 1.0);"
+        "       line_color = texture(line_lut_tex, scale*line_color.rgb+offset); \n"
+        "       line_out = vec4(line_color.rgb, 1.0);"
         "   } else { \n"
         "       line_out = vec4(0.0); \n"
         "   } \n"
@@ -307,18 +324,19 @@ SimplifyProgram::SimplifyProgram() {
     lut_size = glGetUniformLocation(program, "lut_size");
 
     glUniform1i(glGetUniformLocation(program, "color_tex"), 0);
-	glUniform1i(glGetUniformLocation(program, "shadow_tex"), 1);
-    glUniform1i(glGetUniformLocation(program, "toon_tex"), 2);
-    glUniform1i(glGetUniformLocation(program, "id_tex"), 3);
-    glUniform1i(glGetUniformLocation(program, "normal_tex"), 4);
-    glUniform1i(glGetUniformLocation(program, "depth_tex"), 5);
-    glUniform1i(glGetUniformLocation(program, "line_lut_tex"), 6);
-    glUniform1i(glGetUniformLocation(program, "print0_tex"), 7);
-    glUniform1i(glGetUniformLocation(program, "print1_tex"), 8);
-    glUniform1i(glGetUniformLocation(program, "print2_tex"), 9);
-    glUniform1i(glGetUniformLocation(program, "print3_tex"), 10);
-    glUniform1i(glGetUniformLocation(program, "print4_tex"), 11);
-    glUniform1i(glGetUniformLocation(program, "print5_tex"), 12);
+    glUniform1i(glGetUniformLocation(program, "transp_color_tex"), 1);
+	glUniform1i(glGetUniformLocation(program, "shadow_tex"), 2);
+    glUniform1i(glGetUniformLocation(program, "toon_tex"), 3);
+    glUniform1i(glGetUniformLocation(program, "id_tex"), 4);
+    glUniform1i(glGetUniformLocation(program, "normal_tex"), 5);
+    glUniform1i(glGetUniformLocation(program, "depth_tex"), 6);
+    glUniform1i(glGetUniformLocation(program, "line_lut_tex"), 7);
+    glUniform1i(glGetUniformLocation(program, "print0_tex"), 8);
+    glUniform1i(glGetUniformLocation(program, "print1_tex"), 9);
+    glUniform1i(glGetUniformLocation(program, "print2_tex"), 10);
+    glUniform1i(glGetUniformLocation(program, "print3_tex"), 11);
+    glUniform1i(glGetUniformLocation(program, "print4_tex"), 12);
+    glUniform1i(glGetUniformLocation(program, "print5_tex"), 13);
 
 	glUseProgram(0); //unbind program -- glUniform* calls refer to ??? now
     GL_ERRORS();
