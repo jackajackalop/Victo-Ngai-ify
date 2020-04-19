@@ -497,6 +497,7 @@ void PlantMode::draw_scene(GLuint shadow_depth_tex, GLuint *basic_tex_,
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
+    glDepthMask(GL_TRUE);
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, shadow_depth_tex);
@@ -564,6 +565,7 @@ void PlantMode::draw_scene(GLuint shadow_depth_tex, GLuint *basic_tex_,
     glBlendEquation(GL_FUNC_ADD);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glDisable(GL_CULL_FACE);
+    glDepthMask(GL_FALSE);
 
     glUseProgram(transp_program->program);
     scene->draw(*camera, false, true);

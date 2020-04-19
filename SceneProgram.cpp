@@ -241,11 +241,11 @@ TranspProgram::TranspProgram() {
 		"layout(location=0) out vec4 transp_color_out;\n"
 
 		"void main() {\n"
-        "   transp_color_out = vec4(0, 0, 0, 0); \n"
         "   if(controlColor.g>0.5){ \n"
         "       transp_color_out = color; \n"
         "       transp_color_out.a = 0.75; \n"
         "   } \n"
+        "   else discard; \n"
         "} \n"
 	);
 	//As you can see above, adjacent strings in C/C++ are concatenated.

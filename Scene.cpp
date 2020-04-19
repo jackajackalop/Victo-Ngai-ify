@@ -90,7 +90,7 @@ void Scene::draw(glm::mat4 const &world_to_clip, glm::mat4x3 const &world_to_lig
     //Iterate through all drawables, sending each one to OpenGL:
     int id = 1;
     if(transp){
-        for (std::map<float, const Scene::Drawable *>::reverse_iterator it = sorted.rbegin(); it != sorted.rend(); ++it) {
+        for (std::map<float, const Scene::Drawable *>::iterator it = sorted.begin(); it != sorted.end(); ++it) {
             id = -1;
             //reference to drawable's pipeline for convenience:
             Scene::Drawable::Pipeline const &pipeline = it->second->pipeline;
@@ -140,7 +140,7 @@ void Scene::draw(glm::mat4 const &world_to_clip, glm::mat4x3 const &world_to_lig
             glActiveTexture(GL_TEXTURE0);
         }
     } else {
-
+        sorted.clear();
         for (auto &drawable : drawables) {
             //Reference to drawable's pipeline for convenience:
             Scene::Drawable::Pipeline const &pipeline = drawable.pipeline;
