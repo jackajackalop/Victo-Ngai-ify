@@ -111,7 +111,7 @@ SceneProgram::SceneProgram() {
         "   color_out = vec4(lut_color, 1.0); \n"
 
          //shadow color
-//        "   if(nl>0.01 && shadow<0.01) shadow_out = vec4(shadow_lut_color, 1.0); \n"
+        "   if(nl>0.01 && shadow<0.01) shadow_out = vec4(shadow_lut_color, 1.0); \n"
 
          //toon shading
          "  if(nl<0.22) toon_out = vec4(toon_lut_color, 1.0); \n"
@@ -243,7 +243,7 @@ TranspProgram::TranspProgram() {
 		"void main() {\n"
         "   if(controlColor.g>0.5){ \n"
         "       transp_color_out = color; \n"
-        "       transp_color_out.a = 0.75; \n"
+        "       transp_color_out.a = 0.5; \n"
         "   } \n"
         "   else discard; \n"
         "} \n"

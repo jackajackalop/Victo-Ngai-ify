@@ -12,6 +12,7 @@ struct ShadowProgram {
 
 	//Uniform (per-invocation variable) locations:
 	GLuint OBJECT_TO_CLIP_mat4 = -1U;
+    GLuint ControlColor_vec4 = -1U;
 };
 
 extern Load< ShadowProgram > shadow_program;

@@ -139,7 +139,7 @@ static Load< MeshBuffer > meshes(LoadTagDefault, []() -> MeshBuffer const * {
 
 GLuint load_LUT(std::string const &filename);
 static Load< GLuint > lut_tex(LoadTagDefault, []() -> GLuint const *{
-        return new GLuint(load_LUT(data_path("lut-fixed.cube")));
+        return new GLuint(load_LUT(data_path("shower_lut.cube")));
         });
 
 static Load< GLuint > toon_lut_tex(LoadTagDefault, []() -> GLuint const *{
@@ -557,7 +557,7 @@ void PlantMode::draw_scene(GLuint shadow_depth_tex, GLuint *basic_tex_,
     camera->aspect = textures.size.x / float(textures.size.y);
 
     glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClear(GL_COLOR_BUFFER_BIT);
 
     //set up basic OpenGL state:
     glEnable(GL_DEPTH_TEST);
@@ -571,6 +571,8 @@ void PlantMode::draw_scene(GLuint shadow_depth_tex, GLuint *basic_tex_,
     scene->draw(*camera, false, true);
     glBindVertexArray(empty_vao);
 
+    glDepthMask(GL_TRUE);
+    glDisable(GL_BLEND);
     GL_ERRORS();
 }
 
