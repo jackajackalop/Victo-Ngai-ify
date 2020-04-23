@@ -241,7 +241,7 @@ TranspProgram::TranspProgram() {
 		"layout(location=0) out vec4 transp_color_out;\n"
 
 		"void main() {\n"
-        "   if(controlColor.g>0.5){ \n"
+        "   if(controlColor.g>0.1){ \n"
         "       transp_color_out = color; \n"
         "       transp_color_out.a = 0.5; \n"
         "   } \n"
