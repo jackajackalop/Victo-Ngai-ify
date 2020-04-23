@@ -1086,7 +1086,7 @@ void PlantMode::draw(glm::uvec2 const &drawable_size) {
     glActiveTexture(GL_TEXTURE0);
 
     if(show == BASIC){
-        glBindTexture(GL_TEXTURE_2D, textures.basic_tex);
+        glBindTexture(GL_TEXTURE_2D, textures.id_tex);
     }else if(show == TRANSPARENT) {
         glBindTexture(GL_TEXTURE_2D, textures.transp_color_tex);
     }else if(show == MATERIALS){
