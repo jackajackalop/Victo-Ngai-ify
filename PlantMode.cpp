@@ -26,6 +26,8 @@
 #include <random>
 #include <unordered_map>
 
+#include "http-tweak/tweak.hpp"
+
 enum Stages {
     BASIC = 0,
     TRANSPARENT = 1,
@@ -40,6 +42,7 @@ enum Stages {
 
 //art directable globals
 int show = 8;
+float toon_threshold = 0.4;
 
 //other globals
 int lut_size = 64;
@@ -243,6 +246,9 @@ static Load< Scene > scene(LoadTagLate, []() -> Scene const * {
         }
         if (!spot) throw std::runtime_error("No 'Spot' in scene.");
 
+        TWEAK_CONFIG(8888, data_path("../http-tweak/tweak-ui.html"));
+        static TWEAK_HINT(toon_threshold, "float 0.0 1.0");
+
         return ret;
 });
 
@@ -308,6 +314,7 @@ void PlantMode::update(float elapsed) {
     camera_parent_transform->rotation = glm::angleAxis(camera_spin.x, glm::vec3(0.0f, 0.0f, 1.0f))
         *glm::angleAxis(camera_spin.y, glm::vec3(0.0, 1.0, 0.0));
     camera_parent_transform->position = camera_shift;
+    TWEAK_SYNC();
 }
 
 //This code allocates and resizes them as needed:
@@ -522,6 +529,7 @@ void PlantMode::draw_scene(GLuint shadow_depth_tex, GLuint *basic_tex_,
     glm::mat4 spot_to_world = spot->transform->make_local_to_world();
     glUniform3fv(scene_program->spot_position, 1, glm::value_ptr(glm::vec3(spot_to_world[3])));
     glUniform1i(scene_program->lut_size, lut_size);
+    glUniform1f(scene_program->toon_threshold, toon_threshold);
 
     glm::mat4 world_to_shadow_texture =
         //This matrix converts from the spotlight's clip space ([-1,1]^3) into depth map texture coordinates ([0,1]^2) and depth map Z values ([0,1]):

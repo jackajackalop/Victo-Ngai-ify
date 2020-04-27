@@ -67,6 +67,7 @@ SceneProgram::SceneProgram() {
         "uniform int lut_size; \n"
         "uniform vec3 spot_position; \n"
         "uniform int id; \n"
+        "uniform float toon_threshold; \n"
 		"in vec3 position;\n"
 		"in vec3 geoNormal;\n"
 		"in vec3 shadingNormal;\n"
@@ -114,7 +115,7 @@ SceneProgram::SceneProgram() {
         "   if(nl>0.01 && shadow<0.01) shadow_out = vec4(shadow_lut_color, 1.0); \n"
 
          //toon shading
-         "  if(nl<0.22) toon_out = vec4(toon_lut_color, 1.0); \n"
+         "  if(nl<toon_threshold) toon_out = vec4(toon_lut_color, 1.0); \n"
          "  else toon_out = vec4(0.0, 0.0, 0.0, 0.0); \n"
 
         //detailing
@@ -161,6 +162,7 @@ SceneProgram::SceneProgram() {
 	spot_position = glGetUniformLocation(program, "spot_position");
     lut_size = glGetUniformLocation(program, "lut_size");
     id = glGetUniformLocation(program, "id");
+    toon_threshold = glGetUniformLocation(program, "toon_threshold");
 
 	//set TEX to always refer to texture binding zero:
 	glUseProgram(program); //bind program -- glUniform* calls refer to this program now

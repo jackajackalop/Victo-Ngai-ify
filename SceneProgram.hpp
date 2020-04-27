@@ -28,6 +28,7 @@ struct SceneProgram {
 	GLuint spot_position = -1U;
     GLuint lut_size = -1U;
     GLuint id = -1U;
+    GLuint toon_threshold = -1U;
 };
 
 extern Load< SceneProgram > scene_program;

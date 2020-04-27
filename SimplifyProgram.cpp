@@ -268,7 +268,9 @@ SimplifyProgram::SimplifyProgram() {
         "   gradient_out = vec4(gR, gG, gB, 1.0); \n"
         //adds a depth based gradient
         "   float s = texelFetch(depth_tex, coord, 0).r;"
-        "   s = (2.0*0.1)/(1000.0+0.1-s*(1000.0-0.1));"
+        "   float extant = 0.0; \n"
+        "   float brightness = 1000; \n"
+        "   s = (extant*0.1)/(brightness+0.1-s*(brightness-0.1));"
         "   gradient_out.rgb *= 1.0-s*0.4; \n"
 
         //gradients the cast shadows

@@ -107,9 +107,9 @@ if $(OS) = NT { #Windows
 } else if $(OS) = LINUX { #Linux
 	NEST_LIBS = ../nest-libs/linux ;
 	C++ = g++ -no-pie ;
-	C++FLAGS = -std=c++17 -g -Wall -Werror ; #-fsanitize=address ;
+	C++FLAGS = -std=c++17 -g -Wall -Werror -DTWEAK_ENABLE ; #-fsanitize=address ;
 	LINK = g++ -no-pie ;
-	LINKFLAGS = -std=c++17 -g -Wall -Werror ;
+	LINKFLAGS = -std=c++17 -g -Wall -Werror -DTWEAK_ENABLE ;
 	LINKLIBS = ;
 
 	#various nest libs, split into their own lines for ease of commenting-out-when-not-needed:
@@ -175,6 +175,7 @@ GAME_NAMES =
 	MenuMode
 	main
 	data_path
+    http-tweak/tweak
 	;
 
 #Uncomment if you want to build a second "client" program for multiplayer stuff
