@@ -23,6 +23,8 @@ struct SimplifyProgram {
     GLuint width = -1U;
     GLuint height = -1U;
     GLuint lut_size = -1U;
+    GLuint depth_gradient_extent = -1U;
+    GLuint depth_gradient_brightness = -1U;
 };
 
 extern Load< CalculateGradientProgram > calculate_gradient_program;

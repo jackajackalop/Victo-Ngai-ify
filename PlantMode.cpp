@@ -43,6 +43,8 @@ enum Stages {
 //art directable globals
 int show = 8;
 float toon_threshold = 0.4;
+float depth_gradient_extent = 0.0;
+float depth_gradient_brightness = 1.0;
 
 //other globals
 int lut_size = 64;
@@ -248,6 +250,8 @@ static Load< Scene > scene(LoadTagLate, []() -> Scene const * {
 
         TWEAK_CONFIG(8888, data_path("../http-tweak/tweak-ui.html"));
         static TWEAK_HINT(toon_threshold, "float 0.0 1.0");
+        static TWEAK_HINT(depth_gradient_extent, "float 0.0 10.0");
+        static TWEAK_HINT(depth_gradient_brightness, "float 0.0 5.0");
 
         return ret;
 });
@@ -903,6 +907,8 @@ void PlantMode::draw_simplify(GLuint basic_tex, GLuint color_tex,
     glUniform1i(simplify_program->width, textures.size.x);
     glUniform1i(simplify_program->height, textures.size.y);
     glUniform1i(simplify_program->lut_size, lut_size);
+    glUniform1f(simplify_program->depth_gradient_extent, depth_gradient_extent);
+    glUniform1f(simplify_program->depth_gradient_brightness, depth_gradient_brightness);
     GL_ERRORS();
     glDrawArrays(GL_TRIANGLES, 0, 3);
 

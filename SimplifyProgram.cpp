@@ -117,6 +117,8 @@ SimplifyProgram::SimplifyProgram() {
         "uniform int lut_size; \n"
         "uniform int width; \n"
         "uniform int height; \n"
+        "uniform float depth_gradient_extent; \n"
+        "uniform float depth_gradient_brightness; \n"
         "layout(std430, binding=0) buffer xbuffer { uint wsums_packed[]; }; \n"
         "layout(std430, binding=1) buffer ybuffer { uint hsums_packed[]; }; \n"
         "layout(std430, binding=2) buffer w2buffer { uint w2sums_packed[]; }; \n"
@@ -268,9 +270,8 @@ SimplifyProgram::SimplifyProgram() {
         "   gradient_out = vec4(gR, gG, gB, 1.0); \n"
         //adds a depth based gradient
         "   float s = texelFetch(depth_tex, coord, 0).r;"
-        "   float extant = 0.0; \n"
-        "   float brightness = 1000; \n"
-        "   s = (extant*0.1)/(brightness+0.1-s*(brightness-0.1));"
+        "   float brightness = depth_gradient_brightness*1000.0;"
+        "   s = (depth_gradient_extent*0.1)/(brightness+0.1-s*(brightness-0.1));"
         "   gradient_out.rgb *= 1.0-s*0.4; \n"
 
         //gradients the cast shadows
@@ -324,6 +325,8 @@ SimplifyProgram::SimplifyProgram() {
     width = glGetUniformLocation(program, "width");
     height = glGetUniformLocation(program, "height");
     lut_size = glGetUniformLocation(program, "lut_size");
+    depth_gradient_extent = glGetUniformLocation(program, "depth_gradient_extent");
+    depth_gradient_brightness = glGetUniformLocation(program, "depth_gradient_brightness");
 
     glUniform1i(glGetUniformLocation(program, "color_tex"), 0);
     glUniform1i(glGetUniformLocation(program, "transp_color_tex"), 1);
