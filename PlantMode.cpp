@@ -45,6 +45,9 @@ int show = 8;
 float toon_threshold = 0.4;
 float depth_gradient_extent = 0.0;
 float depth_gradient_brightness = 1.0;
+int line_weight = 0;
+float shadow_fade = 2.4;
+float shadow_extent = 0.2;
 
 //other globals
 int lut_size = 64;
@@ -252,6 +255,9 @@ static Load< Scene > scene(LoadTagLate, []() -> Scene const * {
         static TWEAK_HINT(toon_threshold, "float 0.0 1.0");
         static TWEAK_HINT(depth_gradient_extent, "float 0.0 10.0");
         static TWEAK_HINT(depth_gradient_brightness, "float 0.0 5.0");
+        static TWEAK_HINT(line_weight, "int 0 5");
+        static TWEAK_HINT(shadow_fade, "float 0.0 5.0");
+        static TWEAK_HINT(shadow_extent, "float 0.0 1.0");
 
         return ret;
 });
@@ -909,7 +915,10 @@ void PlantMode::draw_simplify(GLuint basic_tex, GLuint color_tex,
     glUniform1i(simplify_program->lut_size, lut_size);
     glUniform1f(simplify_program->depth_gradient_extent, depth_gradient_extent);
     glUniform1f(simplify_program->depth_gradient_brightness, depth_gradient_brightness);
-    GL_ERRORS();
+    glUniform1i(simplify_program->lod, line_weight);
+    glUniform1f(simplify_program->shadow_fade, shadow_fade);
+    glUniform1f(simplify_program->shadow_extent, shadow_extent);
+
     glDrawArrays(GL_TRIANGLES, 0, 3);
 
     GL_ERRORS();

@@ -117,8 +117,11 @@ SimplifyProgram::SimplifyProgram() {
         "uniform int lut_size; \n"
         "uniform int width; \n"
         "uniform int height; \n"
+        "uniform int lod; \n"
         "uniform float depth_gradient_extent; \n"
         "uniform float depth_gradient_brightness; \n"
+        "uniform float shadow_fade; \n"
+        "uniform float shadow_extent; \n"
         "layout(std430, binding=0) buffer xbuffer { uint wsums_packed[]; }; \n"
         "layout(std430, binding=1) buffer ybuffer { uint hsums_packed[]; }; \n"
         "layout(std430, binding=2) buffer w2buffer { uint w2sums_packed[]; }; \n"
@@ -133,7 +136,6 @@ SimplifyProgram::SimplifyProgram() {
 		"layout(location=2) out vec4 gradient_toon_out;\n"
 		"layout(location=3) out vec4 line_out;\n"
 
-        "int lod = 0; \n"
         "vec4 line_color = vec4(0, 0, 0, 0); \n"
 
         "float unpack_float(uint v){ \n"
@@ -284,13 +286,15 @@ SimplifyProgram::SimplifyProgram() {
         "       gG = eqG.x*normalizedY+eqG.y; \n"
         "       gB = eqB.x*normalizedY+eqB.y; \n"
         "       s = texelFetch(depth_tex, coord, 0).r;"
-        "       s = (2.0*0.1)/(300.0+0.1-s*(300.0-0.1));"
+        "       float extent = shadow_extent * 1000.0; \n"
+        "       s = (shadow_fade*0.1)/(extent+0.1-s*(extent-0.1));"
         "       float adj = (1.0-s)*(1.0-s); \n"
-        "       gR = gR*(gR-adj*gradient_out.r)+(1.0-adj)*gradient_out.r; \n"
-        "       gG = gG*(gG-adj*gradient_out.g)+(1.0-adj)*gradient_out.g; \n"
-        "       gB = gB*(gB-adj*gradient_out.b)+(1.0-adj)*gradient_out.b; \n"
+        "       adj = clamp(adj, 0.0, 1.0); \n"
+        "       gR = gR*adj+(1.0-adj)*gradient_out.r; \n"
+        "       gG = gG*adj+(1.0-adj)*gradient_out.g; \n"
+        "       gB = gB*adj+(1.0-adj)*gradient_out.b; \n"
         "       gradient_shadow_out = vec4(gR, gG, gB, 1.0); \n"
-        "       gradient_shadow_out.rgb *= 0.5; \n"
+        "       gradient_shadow_out = vec4(s, s,s, 1.0); \n"
         "   } else { \n"
         "       gradient_shadow_out = vec4(0.0); \n"
         "   } \n"
@@ -327,6 +331,9 @@ SimplifyProgram::SimplifyProgram() {
     lut_size = glGetUniformLocation(program, "lut_size");
     depth_gradient_extent = glGetUniformLocation(program, "depth_gradient_extent");
     depth_gradient_brightness = glGetUniformLocation(program, "depth_gradient_brightness");
+    lod = glGetUniformLocation(program, "lod");
+    shadow_fade = glGetUniformLocation(program, "shadow_fade");
+    shadow_extent = glGetUniformLocation(program, "shadow_extent");
 
     glUniform1i(glGetUniformLocation(program, "color_tex"), 0);
     glUniform1i(glGetUniformLocation(program, "transp_color_tex"), 1);

@@ -25,6 +25,9 @@ struct SimplifyProgram {
     GLuint lut_size = -1U;
     GLuint depth_gradient_extent = -1U;
     GLuint depth_gradient_brightness = -1U;
+    GLuint lod = -1U;
+    GLuint shadow_fade = -1U;
+    GLuint shadow_extent = -1U;
 };
 
 extern Load< CalculateGradientProgram > calculate_gradient_program;
