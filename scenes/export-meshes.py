@@ -143,6 +143,7 @@ for obj in bpy.data.objects:
     tex4 = None
     gradient = None
     transparent = None
+    toon = None
 
     if len(obj.data.vertex_colors) == 0:
         print("WARNING: trying to export color data, but object '" + name + "' does not have color data; will output 0xffffffff")
@@ -160,6 +161,8 @@ for obj in bpy.data.objects:
             gradient = obj.data.vertex_colors["Gradient"].data
         if("Transparent" in obj.data.vertex_colors):
             transparent = obj.data.vertex_colors["Transparent"].data
+        if("Toon" in obj.data.vertex_colors):
+            toon = obj.data.vertex_colors["Toon"].data
     uvs = None
     if len(obj.data.uv_layers) == 0:
         print("WARNING: trying to export texcoord data, but object '" + name + "' does not uv data; will output (0.0, 0.0)")
@@ -199,6 +202,8 @@ for obj in bpy.data.objects:
                     col[0] = gradient[poly.loop_indices[i]].color[0]
                 if(transparent != None):
                     col[1] = transparent[poly.loop_indices[i]].color[0]
+                if(toon != None):
+                    col[2] = toon[poly.loop_indices[i]].color[0]
                 local_data += struct.pack('BBBB', int(col[0] * 255), int(col[1] * 255), int(col[2] * 255), int(col[3] * 255))
             else:
                 local_data += struct.pack('BBBB', 255, 255, 255, 255)

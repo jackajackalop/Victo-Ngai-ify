@@ -102,7 +102,6 @@ SceneProgram::SceneProgram() {
         "   shadow_out = vec4(0.0); \n"
 		"	light = mix(vec3(0.2,0.2,0.2), vec3(1.0,1.0,0.95), 0.5*nl+0.5);\n"
 
-		"	basic_out = vec4(albedo.rgb*light, albedo.a);\n"
         "   color_out = vec4(albedo.rgb, albedo.a); \n"
         "   vec3 scale = vec3(lut_size - 1.0)/lut_size; \n"
         "   vec3 offset = vec3(1.0/(2.0*lut_size)); \n"
@@ -110,6 +109,7 @@ SceneProgram::SceneProgram() {
         "   vec3 toon_lut_color = texture(toon_lut_tex, scale*lut_color+offset).rgb; \n"
         "   vec3 shadow_lut_color = texture(shadow_lut_tex, scale*color_out.rgb+offset).rgb; \n"
         "   color_out = vec4(lut_color, 1.0); \n"
+		"	basic_out = vec4(lut_color*light, albedo.a);\n"
 
          //shadow color
         "   if(nl>0.01 && shadow<0.01) shadow_out = vec4(shadow_lut_color, 1.0); \n"
@@ -245,7 +245,7 @@ TranspProgram::TranspProgram() {
 		"void main() {\n"
         "   if(controlColor.g>0.1){ \n"
         "       transp_color_out = color; \n"
-        "       transp_color_out.a = 0.5; \n"
+        "       transp_color_out.a = controlColor.g; \n"
         "   } \n"
         "   else discard; \n"
         "} \n"

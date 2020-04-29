@@ -64,7 +64,7 @@ CalculateGradientProgram::CalculateGradientProgram() {
 
 		"void main() {\n"
         "   ivec2 coord = ivec2(gl_GlobalInvocationID.xy); \n"
-        "   vec4 color = texelFetch(color_tex, coord, 0); \n"
+        "   vec4 color = texelFetch(basic_tex, coord, 0); \n"
         "   int id = int(texelFetch(id_tex, coord, 0).r*255.0); \n"
         "   add_vals(3*id, color); \n"
         "   color = texelFetch(shadow_tex, coord, 0); \n"

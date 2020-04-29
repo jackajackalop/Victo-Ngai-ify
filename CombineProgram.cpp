@@ -53,15 +53,15 @@ CombineProgram::CombineProgram() {
         "   ivec2 shifted_coord = ivec2(coord+shift_amt); \n"
 
         "   vec4 color = texelFetch(color_tex, shifted_coord, 0); \n"
-        "   float gradient_ctrl = texelFetch(control_tex, shifted_coord, 0).r;"
+        "   vec4 ctrl = texelFetch(control_tex, shifted_coord, 0);"
         "   vec4 gradient = texelFetch(gradient_tex, shifted_coord, 0); \n"
-        "   if(gradient_ctrl>0) gradient = color; \n"
+        "   if(ctrl.r>0) gradient = color; \n"
         "   vec4 gradient_shadow = texelFetch(gradient_shadow_tex, shifted_coord, 0); \n"
         "   vec4 gradient_toon = texelFetch(gradient_toon_tex, shifted_coord, 0); \n"
         "   vec4 line = texelFetch(line_tex, shifted_coord, 0); \n"
 
         "   vec4 shaded = gradient; \n"
-        "   if(gradient_toon.a>0.0){ \n"
+        "   if(ctrl.b==0 && gradient_toon.a>0.0){ \n"
         "       shaded.r *= gradient_toon.r; \n"
         "       shaded.g *= gradient_toon.g; \n"
         "       shaded.b *= gradient_toon.b; \n"

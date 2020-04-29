@@ -42,7 +42,7 @@ enum Stages {
 
 //art directable globals
 int show = 8;
-float toon_threshold = 0.4;
+float toon_threshold = 0.01;
 float depth_gradient_extent = 0.0;
 float depth_gradient_brightness = 1.0;
 int line_weight = 0;
@@ -1109,7 +1109,7 @@ void PlantMode::draw(glm::uvec2 const &drawable_size) {
     glActiveTexture(GL_TEXTURE0);
 
     if(show == BASIC){
-        glBindTexture(GL_TEXTURE_2D, textures.id_tex);
+        glBindTexture(GL_TEXTURE_2D, textures.basic_tex);
     }else if(show == TRANSPARENT) {
         glBindTexture(GL_TEXTURE_2D, textures.transp_color_tex);
     }else if(show == MATERIALS){
