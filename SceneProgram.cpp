@@ -109,7 +109,8 @@ SceneProgram::SceneProgram() {
         "   vec3 toon_lut_color = texture(toon_lut_tex, scale*lut_color+offset).rgb; \n"
         "   vec3 shadow_lut_color = texture(shadow_lut_tex, scale*color_out.rgb+offset).rgb; \n"
         "   color_out = vec4(lut_color, 1.0); \n"
-		"	basic_out = vec4(lut_color*light, albedo.a);\n"
+		"	basic_out = vec4(albedo.rgb*light, albedo.a);\n"
+		"	basic_out.rgb = texture(lut_tex, scale*basic_out.rgb+offset).rgb;\n"
 
          //shadow color
         "   if(nl>0.01 && shadow<0.01) shadow_out = vec4(shadow_lut_color, 1.0); \n"
