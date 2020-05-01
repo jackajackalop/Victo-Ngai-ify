@@ -60,6 +60,7 @@ struct MeshBuffer {
 	Attrib Color;
 	Attrib TexColor;
 	Attrib ControlColor;
+	Attrib LineColor;
 	Attrib TexCoord;
 
 	//local copy of vertex information: (for collision detection)

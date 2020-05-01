@@ -24,7 +24,6 @@ CombineProgram::CombineProgram() {
         "uniform sampler2D texColor_tex; \n"
         "uniform sampler2D control_tex; \n"
         "uniform sampler2D gradient_tex; \n"
-        "uniform sampler2D gradient_shadow_tex; \n"
         "uniform sampler2D gradient_toon_tex; \n"
         "uniform sampler2D line_tex; \n"
         "uniform sampler2D surface_tex; \n"
@@ -56,7 +55,6 @@ CombineProgram::CombineProgram() {
         "   vec4 ctrl = texelFetch(control_tex, shifted_coord, 0);"
         "   vec4 gradient = texelFetch(gradient_tex, shifted_coord, 0); \n"
         "   if(ctrl.r>0) gradient = color; \n"
-        "   vec4 gradient_shadow = texelFetch(gradient_shadow_tex, shifted_coord, 0); \n"
         "   vec4 gradient_toon = texelFetch(gradient_toon_tex, shifted_coord, 0); \n"
         "   vec4 line = texelFetch(line_tex, shifted_coord, 0); \n"
 
@@ -65,11 +63,6 @@ CombineProgram::CombineProgram() {
         "       shaded.r *= gradient_toon.r; \n"
         "       shaded.g *= gradient_toon.g; \n"
         "       shaded.b *= gradient_toon.b; \n"
-        "   } \n"
-        "   if(gradient_shadow.a>0.0){ \n"
-        "       shaded.r *= gradient_shadow.r; \n"
-        "       shaded.g *= gradient_shadow.g; \n"
-        "       shaded.b *= gradient_shadow.b; \n"
         "   } \n"
         "   if(line.a>0.0) shaded = line; \n"
 
@@ -103,11 +96,10 @@ CombineProgram::CombineProgram() {
     glUniform1i(glGetUniformLocation(program, "texColor_tex"), 3);
     glUniform1i(glGetUniformLocation(program, "control_tex"), 4);
     glUniform1i(glGetUniformLocation(program, "gradient_tex"), 5);
-    glUniform1i(glGetUniformLocation(program, "gradient_shadow_tex"), 6);
-    glUniform1i(glGetUniformLocation(program, "gradient_toon_tex"), 7);
-    glUniform1i(glGetUniformLocation(program, "line_tex"), 8);
-    glUniform1i(glGetUniformLocation(program, "surface_tex"), 9);
-    glUniform1i(glGetUniformLocation(program, "vignette_tex"), 10);
+    glUniform1i(glGetUniformLocation(program, "gradient_toon_tex"), 6);
+    glUniform1i(glGetUniformLocation(program, "line_tex"), 7);
+    glUniform1i(glGetUniformLocation(program, "surface_tex"), 8);
+    glUniform1i(glGetUniformLocation(program, "vignette_tex"), 9);
 
 	glUseProgram(0); //unbind program -- glUniform* calls refer to ??? now
     GL_ERRORS();

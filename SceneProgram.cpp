@@ -33,6 +33,7 @@ SceneProgram::SceneProgram() {
 		"in vec4 Color;\n"
 		"in vec4 TexColor;\n"
 		"in vec4 ControlColor;\n"
+		"in vec4 LineColor;\n"
 		"in vec2 TexCoord;\n"
 		"out vec3 position;\n"
 		"out vec3 shadingNormal;\n"
@@ -40,6 +41,7 @@ SceneProgram::SceneProgram() {
 		"out vec4 color;\n"
 		"out vec4 texColor;\n"
 		"out vec4 controlColor;\n"
+		"out vec4 lineColor;\n"
 		"out vec2 texCoord;\n"
 		"out vec4 shadowCoord;\n"
 		"void main() {\n"
@@ -50,6 +52,7 @@ SceneProgram::SceneProgram() {
 		"	color = Color;\n"
 		"	texColor = TexColor;\n"
 		"	controlColor = ControlColor;\n"
+		"	lineColor = LineColor;\n"
 		"	texCoord = TexCoord;\n"
         "   shadowCoord = LIGHT_TO_SPOT * vec4(position, 1.0); \n"
 		"}\n"
@@ -74,6 +77,7 @@ SceneProgram::SceneProgram() {
 		"in vec4 color;\n"
 		"in vec4 texColor;\n"
 		"in vec4 controlColor;\n"
+		"in vec4 lineColor;\n"
 		"in vec2 texCoord;\n"
         "in vec4 shadowCoord; \n"
 		"layout(location=0) out vec4 basic_out;\n"
@@ -82,13 +86,14 @@ SceneProgram::SceneProgram() {
 		"layout(location=3) out vec4 control_out;\n"
         "layout(location=4) out vec4 id_out; \n"
         "layout(location=5) out vec4 normal_out; \n"
-        "layout(location=6) out vec4 shadow_out; \n"
+        "layout(location=6) out vec4 line_color_out; \n"
         "layout(location=7) out vec4 toon_out; \n"
 
 		"void main() {\n"
         "   normal_out = vec4(geoNormal, 1.0); \n"
         "   texColor_out = vec4(0,0,0,0); \n"
         "   control_out = controlColor; \n"
+        "   line_color_out = lineColor; \n"
         "   float id_color = float(id)/255.0; \n"
         "   if(id!=-1) id_out = vec4(id_color, id_color, id_color, 1.0); \n"
 		"	vec3 n = normalize(shadingNormal);\n"
@@ -99,7 +104,7 @@ SceneProgram::SceneProgram() {
         "   vec3 l = normalize(spot_position-position); \n"
 		"   nl = max(0.0, dot(n,l));\n"
 		"   float shadow = textureProj(shadow_depth_tex, shadowCoord);\n"
-        "   shadow_out = vec4(0.0); \n"
+        "   vec4 shadow_out = vec4(0.0); \n"
 		"	light = mix(vec3(0.2,0.2,0.2), vec3(1.0,1.0,0.95), 0.5*nl+0.5);\n"
 
         "   color_out = vec4(albedo.rgb, albedo.a); \n"
@@ -118,6 +123,8 @@ SceneProgram::SceneProgram() {
          //toon shading
          "  if(nl<toon_threshold) toon_out = vec4(toon_lut_color, 1.0); \n"
          "  else toon_out = vec4(0.0, 0.0, 0.0, 0.0); \n"
+         "  toon_out = toon_out*toon_out.a+(1.0-toon_out.a)*shadow_out; \n"
+         "  shadow_out = vec4(0.0); \n"
 
         //detailing
         "   vec4 mat_id = texColor;"
@@ -152,6 +159,7 @@ SceneProgram::SceneProgram() {
 	ShadingNormal_vec3 = glGetAttribLocation(program, "ShadingNormal");
 	GeoNormal_vec3 = glGetAttribLocation(program, "GeoNormal");
 	ControlColor_vec4 = glGetAttribLocation(program, "ControlColor");
+	LineColor_vec4 = glGetAttribLocation(program, "LineColor");
 	Color_vec4 = glGetAttribLocation(program, "Color");
 	TexCoord_vec2 = glGetAttribLocation(program, "TexCoord");
 
@@ -206,6 +214,7 @@ TranspProgram::TranspProgram() {
 		"in vec4 Color;\n"
 		"in vec4 TexColor;\n"
 		"in vec4 ControlColor;\n"
+		"in vec4 LineColor;\n"
 		"in vec2 TexCoord;\n"
 		"out vec3 position;\n"
 		"out vec3 shadingNormal;\n"
@@ -213,6 +222,7 @@ TranspProgram::TranspProgram() {
 		"out vec4 color;\n"
 		"out vec4 texColor;\n"
 		"out vec4 controlColor;\n"
+		"out vec4 lineColor;\n"
 		"out vec2 texCoord;\n"
 		"out vec4 shadowCoord;\n"
 		"void main() {\n"
@@ -223,6 +233,7 @@ TranspProgram::TranspProgram() {
 		"	color = Color;\n"
 		"	texColor = TexColor;\n"
 		"	controlColor = ControlColor;\n"
+		"	lineColor = LineColor;\n"
 		"	texCoord = TexCoord;\n"
         "   shadowCoord = LIGHT_TO_SPOT * vec4(position, 1.0); \n"
 		"}\n"
@@ -239,6 +250,7 @@ TranspProgram::TranspProgram() {
 		"in vec4 color;\n"
 		"in vec4 texColor;\n"
 		"in vec4 controlColor;\n"
+		"in vec4 lineColor;\n"
 		"in vec2 texCoord;\n"
         "in vec4 shadowCoord; \n"
 		"layout(location=0) out vec4 transp_color_out;\n"
@@ -248,7 +260,6 @@ TranspProgram::TranspProgram() {
         "       transp_color_out = color; \n"
         "       transp_color_out.a = controlColor.g; \n"
         "   } \n"
-        "   else discard; \n"
         "} \n"
 	);
 	//As you can see above, adjacent strings in C/C++ are concatenated.
@@ -259,6 +270,7 @@ TranspProgram::TranspProgram() {
 	ShadingNormal_vec3 = glGetAttribLocation(program, "ShadingNormal");
 	GeoNormal_vec3 = glGetAttribLocation(program, "GeoNormal");
 	ControlColor_vec4 = glGetAttribLocation(program, "ControlColor");
+	LineColor_vec4 = glGetAttribLocation(program, "LineColor");
 	Color_vec4 = glGetAttribLocation(program, "Color");
 	TexCoord_vec2 = glGetAttribLocation(program, "TexCoord");
 

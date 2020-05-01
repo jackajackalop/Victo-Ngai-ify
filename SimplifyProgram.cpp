@@ -18,7 +18,6 @@ CalculateGradientProgram::CalculateGradientProgram() {
 		"#version 430\n"
         "uniform sampler2D basic_tex; \n"
         "uniform sampler2D color_tex; \n"
-        "uniform sampler2D shadow_tex; \n"
         "uniform sampler2D toon_tex; \n"
         "uniform sampler2D id_tex; \n"
         "uniform int width; \n"
@@ -67,8 +66,6 @@ CalculateGradientProgram::CalculateGradientProgram() {
         "   vec4 color = texelFetch(basic_tex, coord, 0); \n"
         "   int id = int(texelFetch(id_tex, coord, 0).r*255.0); \n"
         "   add_vals(3*id, color); \n"
-        "   color = texelFetch(shadow_tex, coord, 0); \n"
-        "   add_vals(3*id+1, color); \n"
         "   color = texelFetch(toon_tex, coord, 0); \n"
         "   add_vals(3*id+2, color); \n"
 		"}\n"
@@ -81,9 +78,8 @@ CalculateGradientProgram::CalculateGradientProgram() {
 
     glUniform1i(glGetUniformLocation(program, "basic_tex"), 0);
     glUniform1i(glGetUniformLocation(program, "color_tex"), 1);
-    glUniform1i(glGetUniformLocation(program, "shadow_tex"), 2);
-    glUniform1i(glGetUniformLocation(program, "toon_tex"), 3);
-    glUniform1i(glGetUniformLocation(program, "id_tex"), 4);
+    glUniform1i(glGetUniformLocation(program, "toon_tex"), 2);
+    glUniform1i(glGetUniformLocation(program, "id_tex"), 3);
 
 	glUseProgram(0); //unbind program -- glUniform* calls refer to ??? now
     GL_ERRORS();
@@ -102,7 +98,7 @@ SimplifyProgram::SimplifyProgram() {
 		"#version 430\n"
         "uniform sampler2D color_tex; \n"
         "uniform sampler2D transp_color_tex; \n"
-        "uniform sampler2D shadow_tex; \n"
+        "uniform sampler2D line_color_tex; \n"
         "uniform sampler2D toon_tex; \n"
         "uniform sampler2D id_tex; \n"
         "uniform sampler2D normal_tex; \n"
@@ -132,11 +128,11 @@ SimplifyProgram::SimplifyProgram() {
         "layout(std430, binding=7) buffer vbuffer { uint vsums_packed[]; }; \n"
         "layout(std430, binding=8) buffer nbuffer { uint ns[]; }; \n"
 		"layout(location=0) out vec4 gradient_out;\n"
-		"layout(location=1) out vec4 gradient_shadow_out;\n"
-		"layout(location=2) out vec4 gradient_toon_out;\n"
-		"layout(location=3) out vec4 line_out;\n"
+		"layout(location=1) out vec4 gradient_toon_out;\n"
+		"layout(location=2) out vec4 line_out;\n"
 
         "vec4 line_color = vec4(0, 0, 0, 0); \n"
+        "vec4 line_color2 = vec4(0, 0, 0, 0); \n"
 
         "float unpack_float(uint v){ \n"
         "   return float(v)/4096.0; \n"
@@ -190,16 +186,16 @@ SimplifyProgram::SimplifyProgram() {
         "   float mind = min(d0, min(d1, min(d2, d3))); \n"
         "   if(mind == d0) { \n"
         "       line_color = texelFetch(color_tex, c+ivec2(1, -1), lod); \n"
-        "       if(line_color.a==0) line_color = texelFetch(color_tex, c+ivec2(1, -1), lod); \n"
+        "       line_color2 = texelFetch(line_color_tex, c+ivec2(1, -1), lod); \n"
         "   } else if(mind == d1) {\n "
         "       line_color = texelFetch(color_tex, c+ivec2(1, 1), lod); \n"
-        "       if(line_color.a==0) line_color = texelFetch(color_tex, c+ivec2(1, 1), lod); \n"
+        "       line_color2 = texelFetch(line_color_tex, c+ivec2(1, 1), lod); \n"
         "   } else if(mind == d2) {\n "
         "       line_color = texelFetch(color_tex, c+ivec2(-1, -1), lod); \n"
-        "       if(line_color.a==0) line_color = texelFetch(color_tex, c+ivec2(-1, -1), lod); \n"
+        "       line_color2 = texelFetch(line_color_tex, c+ivec2(-1, -1), lod); \n"
         "   } else if(mind == d3) { \n"
         "       line_color = texelFetch(color_tex, c+ivec2(-1, 1), lod); \n"
-        "       if(line_color.a==0) line_color = texelFetch(color_tex, c+ivec2(-1, 1), lod); \n"
+        "       line_color2 = texelFetch(line_color_tex, c+ivec2(-1, 1), lod); \n"
         "   } \n"
 
         "   float ddif0 = d1-d0; \n"
@@ -276,29 +272,6 @@ SimplifyProgram::SimplifyProgram() {
         "   s = (depth_gradient_extent*0.1)/(brightness+0.1-s*(brightness-0.1));"
         "   gradient_out.rgb *= 1.0-s*0.4; \n"
 
-        //gradients the cast shadows
-        "   vec4 shadow_color = texelFetch(shadow_tex, coord, 0); \n"
-        "   if(shadow_color.a>0.0){ \n"
-        "       eqR = calculate_eq(0, 1); \n"
-        "       eqG = calculate_eq(1, 1); \n"
-        "       eqB = calculate_eq(2, 1); \n"
-        "       gR = eqR.x*normalizedY+eqR.y; \n"
-        "       gG = eqG.x*normalizedY+eqG.y; \n"
-        "       gB = eqB.x*normalizedY+eqB.y; \n"
-        "       s = texelFetch(depth_tex, coord, 0).r;"
-        "       float extent = shadow_extent * 1000.0; \n"
-        "       s = (shadow_fade*0.1)/(extent+0.1-s*(extent-0.1));"
-        "       float adj = (1.0-s)*(1.0-s); \n"
-        "       adj = clamp(adj, 0.0, 1.0); \n"
-        "       gR = gR*adj+(1.0-adj)*gradient_out.r; \n"
-        "       gG = gG*adj+(1.0-adj)*gradient_out.g; \n"
-        "       gB = gB*adj+(1.0-adj)*gradient_out.b; \n"
-        "       gradient_shadow_out = vec4(gR, gG, gB, 1.0); \n"
-        "       gradient_shadow_out = vec4(s, s,s, 1.0); \n"
-        "   } else { \n"
-        "       gradient_shadow_out = vec4(0.0); \n"
-        "   } \n"
-
         //gradients the toon shading
         "   vec4 toon_color = texelFetch(toon_tex, coord, 0); \n"
         "   if(toon_color.a>0.0){ \n"
@@ -308,7 +281,10 @@ SimplifyProgram::SimplifyProgram() {
         "       gR = eqR.x*normalizedY+eqR.y; \n"
         "       gG = eqG.x*normalizedY+eqG.y; \n"
         "       gB = eqB.x*normalizedY+eqB.y; \n"
-        "       gradient_toon_out = tone(vec4(gR, gG, gB, 1.0)); \n"
+        "       s = texelFetch(depth_tex, coord, 0).r;"
+        "       float extent = shadow_extent * 1000.0; \n"
+        "       s = (shadow_fade*0.1)/(extent+0.1-s*(extent-0.1));"
+        "       gradient_toon_out = tone(vec4(s*gR, s*gG, s*gB, 1.0)); \n"
         "   } else { \n"
         "       gradient_toon_out = vec4(0.0); \n"
         "   } \n"
@@ -318,6 +294,7 @@ SimplifyProgram::SimplifyProgram() {
         "       vec3 scale = vec3(lut_size - 1.0)/lut_size; \n"
         "       vec3 offset = vec3(1.0/(2.0*lut_size)); \n"
         "       line_color = texture(line_lut_tex, scale*line_color.rgb+offset); \n"
+        "       if(line_color2.a>0) line_color = line_color2; \n"
         "       line_out = vec4(line_color.rgb, 1.0);"
         "   } else { \n"
         "       line_out = vec4(0.0); \n"
@@ -337,7 +314,7 @@ SimplifyProgram::SimplifyProgram() {
 
     glUniform1i(glGetUniformLocation(program, "color_tex"), 0);
     glUniform1i(glGetUniformLocation(program, "transp_color_tex"), 1);
-	glUniform1i(glGetUniformLocation(program, "shadow_tex"), 2);
+    glUniform1i(glGetUniformLocation(program, "line_color_tex"), 2);
     glUniform1i(glGetUniformLocation(program, "toon_tex"), 3);
     glUniform1i(glGetUniformLocation(program, "id_tex"), 4);
     glUniform1i(glGetUniformLocation(program, "normal_tex"), 5);

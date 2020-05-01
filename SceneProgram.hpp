@@ -17,6 +17,7 @@ struct SceneProgram {
 	GLuint ShadingNormal_vec3 = -1U;
 	GLuint Color_vec4 = -1U;
 	GLuint ControlColor_vec4 = -1U;
+	GLuint LineColor_vec4 = -1U;
 	GLuint TexColor_vec4 = -1U;
 	GLuint TexCoord_vec2 = -1U;
 
@@ -49,6 +50,7 @@ struct TranspProgram {
 	GLuint ShadingNormal_vec3 = -1U;
 	GLuint Color_vec4 = -1U;
 	GLuint ControlColor_vec4 = -1U;
+	GLuint LineColor_vec4 = -1U;
 	GLuint TexColor_vec4 = -1U;
 	GLuint TexCoord_vec2 = -1U;
 

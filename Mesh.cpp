@@ -25,9 +25,10 @@ MeshBuffer::MeshBuffer(std::string const &filename) {
 		glm::u8vec4 Color;
 		glm::u8vec4 TexColor;
         glm::u8vec4 ControlColor;
+        glm::u8vec4 LineColor;
 		glm::vec2 TexCoord;
 	};
-	static_assert(sizeof(Vertex) == 3*4+3*4+3*4+4*3+2*4, "Vertex is packed.");
+	static_assert(sizeof(Vertex) == 3*4+3*4+3*4+4*4+2*4, "Vertex is packed.");
 	std::vector< Vertex > data;
 
 	//read + upload data chunk:
@@ -48,6 +49,7 @@ MeshBuffer::MeshBuffer(std::string const &filename) {
 		Color = Attrib(buffer, 4, GL_UNSIGNED_BYTE, Attrib::AsFloatFromFixedPoint, sizeof(Vertex), offsetof(Vertex, Color));
 		TexColor = Attrib(buffer, 4, GL_UNSIGNED_BYTE, Attrib::AsFloatFromFixedPoint, sizeof(Vertex), offsetof(Vertex, TexColor));
 		ControlColor = Attrib(buffer, 4, GL_UNSIGNED_BYTE, Attrib::AsFloatFromFixedPoint, sizeof(Vertex), offsetof(Vertex, ControlColor));
+		LineColor = Attrib(buffer, 4, GL_UNSIGNED_BYTE, Attrib::AsFloatFromFixedPoint, sizeof(Vertex), offsetof(Vertex, LineColor));
 		TexCoord = Attrib(buffer, 2, GL_FLOAT, Attrib::AsFloat, sizeof(Vertex), offsetof(Vertex, TexCoord));
 	} else {
 		throw std::runtime_error("Unknown file type '" + filename + "'");
@@ -127,6 +129,7 @@ GLuint MeshBuffer::make_vao_for_program(GLuint program) const {
 	attribs["Color"] = &Color;
 	attribs["TexColor"] = &TexColor;
 	attribs["ControlColor"] = &ControlColor;
+	attribs["LineColor"] = &LineColor;
 	attribs["TexCoord"] = &TexCoord;
 
 	return ::make_vao_for_program(attribs, program);
