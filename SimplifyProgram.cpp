@@ -118,6 +118,8 @@ SimplifyProgram::SimplifyProgram() {
         "uniform float depth_gradient_brightness; \n"
         "uniform float shadow_fade; \n"
         "uniform float shadow_extent; \n"
+        "uniform float line_depth_threshold; \n"
+        "uniform float line_normal_threshold; \n"
         "layout(std430, binding=0) buffer xbuffer { uint wsums_packed[]; }; \n"
         "layout(std430, binding=1) buffer ybuffer { uint hsums_packed[]; }; \n"
         "layout(std430, binding=2) buffer w2buffer { uint w2sums_packed[]; }; \n"
@@ -178,7 +180,6 @@ SimplifyProgram::SimplifyProgram() {
         //referenced this https://roystan.net/articles/outline-shader.html
         "bool depthCheck(ivec2 coord){ \n"
         "   ivec2 c = ivec2(coord/(pow(2.0, lod))); \n"
-        "   float threshold = 0.005; \n"
         "   float d0 = texelFetch(depth_tex, c+ivec2(1, -1), lod).r; \n"
         "   float d1 = texelFetch(depth_tex, c+ivec2(1, 1), lod).r; \n"
         "   float d2 = texelFetch(depth_tex, c+ivec2(-1, -1), lod).r; \n"
@@ -201,12 +202,11 @@ SimplifyProgram::SimplifyProgram() {
         "   float ddif0 = d1-d0; \n"
         "   float ddif1 = d3-d2; \n"
         "   float edged = sqrt(ddif0*ddif0 + ddif1*ddif1)*100; \n"
-        "   return edged>threshold;"
+        "   return edged>line_depth_threshold;"
         "} \n"
 
         "bool normalCheck(ivec2 coord) { \n"
         "   ivec2 c = ivec2(coord/(pow(2.0, lod))); \n"
-        "   float threshold = 0.3; \n"
         "   vec3 n0 = texelFetch(normal_tex, c+ivec2(1, -1), lod).xyz; \n"
         "   vec3 n1 = texelFetch(normal_tex, c+ivec2(1, 1), lod).xyz; \n"
         "   vec3 n2 = texelFetch(normal_tex, c+ivec2(-1, -1), lod).xyz; \n"
@@ -214,7 +214,7 @@ SimplifyProgram::SimplifyProgram() {
         "   vec3 ndif0 = n1-n0; \n"
         "   vec3 ndif1 = n3-n2; \n"
         "   float edgen = sqrt(dot(ndif0, ndif0) + dot(ndif1, ndif1)); \n"
-        "   return edgen>threshold;"
+        "   return edgen>line_normal_threshold;"
         "} \n"
 
         //Based on Jaume Sanchez Elias's implementation of "Real-Time Hatching"
@@ -311,6 +311,8 @@ SimplifyProgram::SimplifyProgram() {
     lod = glGetUniformLocation(program, "lod");
     shadow_fade = glGetUniformLocation(program, "shadow_fade");
     shadow_extent = glGetUniformLocation(program, "shadow_extent");
+    line_depth_threshold = glGetUniformLocation(program, "line_depth_threshold");
+    line_normal_threshold = glGetUniformLocation(program, "line_normal_threshold");
 
     glUniform1i(glGetUniformLocation(program, "color_tex"), 0);
     glUniform1i(glGetUniformLocation(program, "transp_color_tex"), 1);

@@ -28,6 +28,8 @@ struct SimplifyProgram {
     GLuint lod = -1U;
     GLuint shadow_fade = -1U;
     GLuint shadow_extent = -1U;
+    GLuint line_depth_threshold = -1U;
+    GLuint line_normal_threshold = -1U;
 };
 
 extern Load< CalculateGradientProgram > calculate_gradient_program;
