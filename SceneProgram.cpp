@@ -71,6 +71,7 @@ SceneProgram::SceneProgram() {
         "uniform vec3 spot_position; \n"
         "uniform int id; \n"
         "uniform float toon_threshold; \n"
+        "uniform float contrast; \n"
 		"in vec3 position;\n"
 		"in vec3 geoNormal;\n"
 		"in vec3 shadingNormal;\n"
@@ -116,6 +117,7 @@ SceneProgram::SceneProgram() {
         "   color_out = vec4(lut_color, 1.0); \n"
 		"	basic_out = vec4(albedo.rgb*light, albedo.a);\n"
 		"	basic_out.rgb = texture(lut_tex, scale*basic_out.rgb+offset).rgb;\n"
+        "   basic_out.rgb = (basic_out.rgb-0.5f)*max(contrast, 0.0)+0.5;"
 
          //shadow color
         "   if(nl>0.01 && shadow<0.01) shadow_out = vec4(shadow_lut_color, 1.0); \n"
@@ -172,6 +174,7 @@ SceneProgram::SceneProgram() {
     lut_size = glGetUniformLocation(program, "lut_size");
     id = glGetUniformLocation(program, "id");
     toon_threshold = glGetUniformLocation(program, "toon_threshold");
+    contrast = glGetUniformLocation(program, "contrast");
 
 	//set TEX to always refer to texture binding zero:
 	glUseProgram(program); //bind program -- glUniform* calls refer to this program now

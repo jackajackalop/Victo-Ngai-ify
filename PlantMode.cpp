@@ -42,14 +42,15 @@ enum Stages {
 
 //art directable globals
 int show = 8;
-float toon_threshold = 0.01;
-float depth_gradient_extent = 0.0;
-float depth_gradient_brightness = 1.0;
+float toon_threshold = 0.01f;
+float contrast = 1.3f;
+float depth_gradient_extent = 0.0f;
+float depth_gradient_brightness = 1.0f;
 int line_weight = 0;
-float shadow_fade = 3.0;
-float shadow_extent = 0.08;
-float line_depth_threshold = 0.005;
-float line_normal_threshold = 0.3;
+float shadow_fade = 3.0f;
+float shadow_extent = 0.08f;
+float line_depth_threshold = 0.005f;
+float line_normal_threshold = 0.3f;
 
 //other globals
 int lut_size = 64;
@@ -255,6 +256,7 @@ static Load< Scene > scene(LoadTagLate, []() -> Scene const * {
 
         TWEAK_CONFIG(8888, data_path("../http-tweak/tweak-ui.html"));
         static TWEAK_HINT(toon_threshold, "float 0.0 1.0");
+        static TWEAK_HINT(contrast, "float 0.0 5.0");
         static TWEAK_HINT(depth_gradient_extent, "float 0.0 10.0");
         static TWEAK_HINT(depth_gradient_brightness, "float 0.0 5.0");
         static TWEAK_HINT(line_weight, "int 0 5");
@@ -547,6 +549,7 @@ void PlantMode::draw_scene(GLuint shadow_depth_tex, GLuint *basic_tex_,
     glUniform3fv(scene_program->spot_position, 1, glm::value_ptr(glm::vec3(spot_to_world[3])));
     glUniform1i(scene_program->lut_size, lut_size);
     glUniform1f(scene_program->toon_threshold, toon_threshold);
+    glUniform1f(scene_program->contrast, contrast);
 
     glm::mat4 world_to_shadow_texture =
         //This matrix converts from the spotlight's clip space ([-1,1]^3) into depth map texture coordinates ([0,1]^2) and depth map Z values ([0,1]):
