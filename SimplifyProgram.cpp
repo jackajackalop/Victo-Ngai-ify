@@ -260,6 +260,7 @@ SimplifyProgram::SimplifyProgram() {
         "   ivec2 coord = ivec2(gl_FragCoord.xy); \n"
 
         //calculates the main gradients
+        "   vec4 base = texelFetch(color_tex, coord, 0); \n"
         "   vec2 eqR = calculate_eq(0, 0); \n"
         "   vec2 eqG = calculate_eq(1, 0); \n"
         "   vec2 eqB = calculate_eq(2, 0); \n"
@@ -267,7 +268,7 @@ SimplifyProgram::SimplifyProgram() {
         "   float gR = eqR.x*normalizedY+eqR.y; \n"
         "   float gG = eqG.x*normalizedY+eqG.y; \n"
         "   float gB = eqB.x*normalizedY+eqB.y; \n"
-        "   gradient_out = vec4(gR, gG, gB, 1.0); \n"
+        "   gradient_out = vec4(gR, gG, gB, base.a); \n"
         //adds a depth based gradient
         "   float s = texelFetch(depth_tex, coord, 0).r;"
         "   float brightness = depth_gradient_brightness*1000.0;"
@@ -287,7 +288,7 @@ SimplifyProgram::SimplifyProgram() {
         "       s = texelFetch(depth_tex, coord, 0).r;"
         "       float extent = shadow_extent * 1000.0; \n"
         "       s = (shadow_fade*0.1)/(extent+0.1-s*(extent-0.1));"
-        "       gradient_toon_out = vec4(s*gR, s*gG, s*gB, 1.0); \n"
+        "       gradient_toon_out = vec4(s*gR, s*gG, s*gB, base.a); \n"
         "   } else { \n"
         "       gradient_toon_out = vec4(0.0); \n"
         "   } \n"
@@ -300,7 +301,7 @@ SimplifyProgram::SimplifyProgram() {
         "       if(transp_line_color.a>0) \n"
         "           line_color.rgb = transp_line_color.rgb*transp_line_color.a+line_color.rgb*(1.0-transp_line_color.a); \n"
         "       else if(ctrl_line_color.a>0) line_color = ctrl_line_color; \n"
-        "       line_out = vec4(line_color.rgb, 1.0);"
+        "       line_out = vec4(line_color.rgb, base.a);"
         "   } else { \n"
         "       line_out = vec4(0.0); \n"
         "   } \n"

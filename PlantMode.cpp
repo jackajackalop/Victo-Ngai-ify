@@ -196,7 +196,7 @@ static Load< GLuint > print5_tex(LoadTagDefault, [](){
         });
 
 static Load< GLuint > vignette_tex(LoadTagDefault, [](){
-        return new GLuint (load_texture(data_path("textures/vignette.png")));
+        return new GLuint (load_texture(data_path("textures/vignette2.png")));
         });
 
 static Load< GLuint > tex1(LoadTagDefault, [](){

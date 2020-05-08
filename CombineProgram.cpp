@@ -36,7 +36,7 @@ CombineProgram::CombineProgram() {
 		"layout(location=0) out vec4 combine_out;\n"
 
         "vec4 pow_col(vec4 base, float exp){ \n"
-        "   return vec4(pow(base.r, exp), pow(base.g, exp), pow(base.b, exp), 1.0); \n"
+        "   return vec4(pow(base.r, exp), pow(base.g, exp), pow(base.b, exp), base.a); \n"
         "} \n"
 
 		"void main() {\n"
@@ -60,9 +60,7 @@ CombineProgram::CombineProgram() {
 
         "   vec4 shaded = gradient; \n"
         "   if(ctrl.b==0 && gradient_toon.a>0.0){ \n"
-        "       shaded.r *= gradient_toon.r; \n"
-        "       shaded.g *= gradient_toon.g; \n"
-        "       shaded.b *= gradient_toon.b; \n"
+        "       shaded.rgb *= gradient_toon.rgb;"
         "   } \n"
         "   if(line.a>0.0) shaded = line; \n"
 
@@ -72,7 +70,7 @@ CombineProgram::CombineProgram() {
         "   float Piv = 0.5*(1.0-surface.r); \n"
         "   float density_amt = 0.5; \n"
         "   vec4 powed = pow_col(shaded, 1.0+density_amt*Piv); \n"
-        "   vec4 granulated = shaded*(shaded-density_amt*Piv)+(1.0-shaded)*powed; \n"
+        "   vec4 granulated = shaded.a*(shaded-density_amt*Piv)+(1.0-shaded.a)*powed; \n"
 
         //detailing
         "   vec4 texColor = texelFetch(texColor_tex, ivec2(gl_FragCoord.xy), 0);"
@@ -85,7 +83,8 @@ CombineProgram::CombineProgram() {
         //vignette
         "   vec2 tex_coord = gl_FragCoord.xy/textureSize(surface_tex, 0); \n"
         "   vec4 vignette = texture(vignette_tex, tex_coord); \n"
-        "   combine_out = vignette*vignette.a+combine_out*(1.0-vignette.a); \n"
+        "   if(combine_out.a>0) \n"
+        "       combine_out = vignette*vignette.a+combine_out*(1.0-vignette.a); \n"
         "}\n"
 	);
 	glUseProgram(program); //bind program -- glUniform* calls refer to this program now
