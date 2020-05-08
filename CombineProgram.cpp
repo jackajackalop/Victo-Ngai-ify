@@ -45,7 +45,7 @@ CombineProgram::CombineProgram() {
         "   uint n = n_sum[id]; \n"
 
         //paper distortion
-        "   int TEXTURE_LIMIT = 1000; \n"
+        "   int TEXTURE_LIMIT = 500; \n"
         "   vec4 surfaceColor = texelFetch(surface_tex, coord, 0); \n"
         "   if(n<TEXTURE_LIMIT) surfaceColor = vec4(0.0, 0.0, 0.0, 0.0); \n"
         "   vec2 shift_amt = surfaceColor.gb; \n"

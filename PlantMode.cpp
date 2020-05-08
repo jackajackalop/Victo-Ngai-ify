@@ -168,7 +168,7 @@ static Load< GLuint > line_lut_tex(LoadTagDefault, []() -> GLuint const *{
         });
 
 static Load< GLuint > paper_tex(LoadTagDefault, [](){
-        return new GLuint (load_texture(data_path("textures/paper.png")));
+        return new GLuint (load_texture(data_path("textures/watercolor.png")));
         });
 
 static Load< GLuint > print0_tex(LoadTagDefault, [](){

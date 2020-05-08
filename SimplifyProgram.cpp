@@ -176,7 +176,7 @@ SimplifyProgram::SimplifyProgram() {
         "   float tidu = texelFetch(transp_color_tex, c+ivec2(0, 1), lod).r; \n"
         "   float tidd = texelFetch(transp_color_tex, c+ivec2(0, -1), lod).r; \n"
         "   bool opaque_line = !(id==idl && id==idr && id==idu && id==idd); \n"
-        "   bool transp_line = !(tid==tidl && tid==tidr && tid==tidu && tid==tidd); \n"
+        "   bool transp_line = (tid-tidl+tid-tidr+tid-tidu+tid-tidd)>0.1; \n"
         "   return opaque_line || transp_line; \n"
         "} \n"
 
