@@ -51,6 +51,8 @@ float shadow_fade = 3.0f;
 float shadow_extent = 0.08f;
 float line_depth_threshold = 0.005f;
 float line_normal_threshold = 0.3f;
+float tone_offset = 0.2f;
+float tone_strength = 0.05f;
 
 //other globals
 int lut_size = 64;
@@ -264,6 +266,8 @@ static Load< Scene > scene(LoadTagLate, []() -> Scene const * {
         static TWEAK_HINT(shadow_extent, "float 0.0 1.0");
         static TWEAK_HINT(line_depth_threshold, "float 0.0 1.0");
         static TWEAK_HINT(line_normal_threshold, "float 0.0 1.0");
+        static TWEAK_HINT(tone_offset, "float 0.0 1.0");
+        static TWEAK_HINT(tone_strength, "float 0.0 1.0");
 
         return ret;
 });
@@ -924,6 +928,8 @@ void PlantMode::draw_simplify(GLuint basic_tex, GLuint color_tex,
     glUniform1f(simplify_program->shadow_extent, shadow_extent);
     glUniform1f(simplify_program->line_depth_threshold, line_depth_threshold);
     glUniform1f(simplify_program->line_normal_threshold, line_normal_threshold);
+    glUniform1f(simplify_program->tone_offset, tone_offset);
+    glUniform1f(simplify_program->tone_strength, tone_strength);
 
     glDrawArrays(GL_TRIANGLES, 0, 3);
 

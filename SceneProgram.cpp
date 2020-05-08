@@ -126,7 +126,6 @@ SceneProgram::SceneProgram() {
          "  if(nl<toon_threshold) toon_out = vec4(toon_lut_color, 1.0); \n"
          "  else toon_out = vec4(0.0, 0.0, 0.0, 0.0); \n"
          "  toon_out = toon_out*toon_out.a+(1.0-toon_out.a)*shadow_out; \n"
-         "  shadow_out = vec4(0.0); \n"
 
         //detailing
         "   vec4 mat_id = texColor;"

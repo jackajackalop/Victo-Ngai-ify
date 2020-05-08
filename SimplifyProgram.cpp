@@ -120,6 +120,8 @@ SimplifyProgram::SimplifyProgram() {
         "uniform float shadow_extent; \n"
         "uniform float line_depth_threshold; \n"
         "uniform float line_normal_threshold; \n"
+        "uniform float tone_offset; \n"
+        "uniform float tone_strength; \n"
         "layout(std430, binding=0) buffer xbuffer { uint wsums_packed[]; }; \n"
         "layout(std430, binding=1) buffer ybuffer { uint hsums_packed[]; }; \n"
         "layout(std430, binding=2) buffer w2buffer { uint w2sums_packed[]; }; \n"
@@ -234,13 +236,8 @@ SimplifyProgram::SimplifyProgram() {
         "   vec4 print3 = texture(print3_tex, uv, 0);\n"
         "   vec4 print4 = texture(print4_tex, uv, 0);\n"
         "   vec4 print5 = texture(print5_tex, uv, 0);\n"
-        "   float ambientWeight = 0.08; \n"
-        "   float diffuseWeight = 1.0; \n"
-        "   float rimWeight = 0.46; \n"
-        "   float specularWeight = 1.0; \n"
-        "   float shininess = 49.0; \n"
         "   float shading = (og.r+og.g+og.b)/3.0; \n"
-        "   if(shading>0) shading+=0.5; \n"
+        "   if(shading>0) shading+=tone_offset; \n"
         "   vec4 c = vec4( 0.0, 0.0, 0.0, 0.0); \n"
         "   float step = 1.0/6.0; \n"
         "   if( shading <= step && shading > 0.0) \n"
@@ -255,7 +252,7 @@ SimplifyProgram::SimplifyProgram() {
         "       c = mix(print1, print0, 6.0*(shading-4.0*step)); \n"
         "   if( shading>5.0*step ) \n"
         "       c = mix( print0, vec4(1.0), 6.0*(shading-5.0*step)); \n"
-        "   if(c.a>0.0) return og*0.8; \n"
+        "   if(c.a>0.0) return og*(1.0-tone_strength); \n"
         "   return og; \n"
         "} \n"
 
@@ -276,6 +273,7 @@ SimplifyProgram::SimplifyProgram() {
         "   float brightness = depth_gradient_brightness*1000.0;"
         "   s = (depth_gradient_extent*0.1)/(brightness+0.1-s*(brightness-0.1));"
         "   gradient_out.rgb *= 1.0-s*0.4; \n"
+        "   gradient_out = tone(gradient_out); \n"
 
         //gradients the toon shading
         "   vec4 toon_color = texelFetch(toon_tex, coord, 0); \n"
@@ -289,7 +287,7 @@ SimplifyProgram::SimplifyProgram() {
         "       s = texelFetch(depth_tex, coord, 0).r;"
         "       float extent = shadow_extent * 1000.0; \n"
         "       s = (shadow_fade*0.1)/(extent+0.1-s*(extent-0.1));"
-        "       gradient_toon_out = tone(vec4(s*gR, s*gG, s*gB, 1.0)); \n"
+        "       gradient_toon_out = vec4(s*gR, s*gG, s*gB, 1.0); \n"
         "   } else { \n"
         "       gradient_toon_out = vec4(0.0); \n"
         "   } \n"
@@ -320,6 +318,8 @@ SimplifyProgram::SimplifyProgram() {
     shadow_extent = glGetUniformLocation(program, "shadow_extent");
     line_depth_threshold = glGetUniformLocation(program, "line_depth_threshold");
     line_normal_threshold = glGetUniformLocation(program, "line_normal_threshold");
+    tone_offset = glGetUniformLocation(program, "tone_offset");
+    tone_strength = glGetUniformLocation(program, "tone_strength");
 
     glUniform1i(glGetUniformLocation(program, "color_tex"), 0);
     glUniform1i(glGetUniformLocation(program, "transp_color_tex"), 1);
