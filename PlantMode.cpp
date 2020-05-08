@@ -52,7 +52,7 @@ float shadow_extent = 0.08f;
 float line_depth_threshold = 0.005f;
 float line_normal_threshold = 0.3f;
 float tone_offset = 0.2f;
-float tone_strength = 0.05f;
+float tone_strength = 0.0f;
 
 //other globals
 int lut_size = 64;
