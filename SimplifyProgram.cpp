@@ -116,8 +116,6 @@ SimplifyProgram::SimplifyProgram() {
         "uniform int lod; \n"
         "uniform float depth_gradient_extent; \n"
         "uniform float depth_gradient_brightness; \n"
-        "uniform float shadow_fade; \n"
-        "uniform float shadow_extent; \n"
         "uniform float line_depth_threshold; \n"
         "uniform float line_normal_threshold; \n"
         "uniform float tone_offset; \n"
@@ -285,10 +283,7 @@ SimplifyProgram::SimplifyProgram() {
         "       gR = eqR.x*normalizedY+eqR.y; \n"
         "       gG = eqG.x*normalizedY+eqG.y; \n"
         "       gB = eqB.x*normalizedY+eqB.y; \n"
-        "       s = texelFetch(depth_tex, coord, 0).r;"
-        "       float extent = shadow_extent * 1000.0; \n"
-        "       s = (shadow_fade*0.1)/(extent+0.1-s*(extent-0.1));"
-        "       gradient_toon_out = vec4(s*gR, s*gG, s*gB, base.a); \n"
+        "       gradient_toon_out = vec4(gR, gG, gB, toon_color.a); \n"
         "   } else { \n"
         "       gradient_toon_out = vec4(0.0); \n"
         "   } \n"
@@ -315,8 +310,6 @@ SimplifyProgram::SimplifyProgram() {
     depth_gradient_extent = glGetUniformLocation(program, "depth_gradient_extent");
     depth_gradient_brightness = glGetUniformLocation(program, "depth_gradient_brightness");
     lod = glGetUniformLocation(program, "lod");
-    shadow_fade = glGetUniformLocation(program, "shadow_fade");
-    shadow_extent = glGetUniformLocation(program, "shadow_extent");
     line_depth_threshold = glGetUniformLocation(program, "line_depth_threshold");
     line_normal_threshold = glGetUniformLocation(program, "line_normal_threshold");
     tone_offset = glGetUniformLocation(program, "tone_offset");

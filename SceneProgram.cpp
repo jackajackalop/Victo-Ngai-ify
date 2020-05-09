@@ -59,7 +59,8 @@ SceneProgram::SceneProgram() {
 	,
 		//fragment shader:
 		"#version 330\n"
-        "uniform sampler2DShadow shadow_depth_tex; \n"
+        "uniform sampler2DShadow shadow_depth_comp_tex; \n"
+        "uniform sampler2D shadow_depth_tex; \n"
         "uniform sampler3D lut_tex; \n"
         "uniform sampler3D toon_lut_tex; \n"
         "uniform sampler3D shadow_lut_tex; \n"
@@ -72,6 +73,8 @@ SceneProgram::SceneProgram() {
         "uniform int id; \n"
         "uniform float toon_threshold; \n"
         "uniform float contrast; \n"
+        "uniform float shadow_fade; \n"
+        "uniform float shadow_extent; \n"
 		"in vec3 position;\n"
 		"in vec3 geoNormal;\n"
 		"in vec3 shadingNormal;\n"
@@ -104,10 +107,14 @@ SceneProgram::SceneProgram() {
 
         "   vec3 l = normalize(spot_position-position); \n"
 		"   nl = max(0.0, dot(n,l));\n"
-		"   float shadow = textureProj(shadow_depth_tex, shadowCoord);\n"
+		"   float s = textureProj(shadow_depth_tex, shadowCoord).r;\n"
+		"   float shadow = textureProj(shadow_depth_comp_tex, shadowCoord);\n"
         "   vec4 shadow_out = vec4(0.0); \n"
 		"	light = mix(vec3(0.2,0.2,0.2), vec3(1.0,1.0,0.95), 0.5*nl+0.5);\n"
 
+        "   float extent = shadow_extent*1000.0;\n"
+        "   s = (shadow_fade*0.1)/(extent+0.1-s*(extent-0.1));"
+        "   s = s;\n"
         "   color_out = vec4(albedo.rgb, albedo.a); \n"
         "   vec3 scale = vec3(lut_size - 1.0)/lut_size; \n"
         "   vec3 offset = vec3(1.0/(2.0*lut_size)); \n"
@@ -115,17 +122,18 @@ SceneProgram::SceneProgram() {
         "   vec3 toon_lut_color = texture(toon_lut_tex, scale*lut_color+offset).rgb; \n"
         "   vec3 shadow_lut_color = texture(shadow_lut_tex, scale*color_out.rgb+offset).rgb; \n"
         "   color_out = vec4(lut_color, 1.0); \n"
+       // "   color_out = vec4(s,s,s, 1.0); \n"
 		"	basic_out = vec4(albedo.rgb*light, albedo.a);\n"
 		"	basic_out.rgb = texture(lut_tex, scale*basic_out.rgb+offset).rgb;\n"
         "   basic_out.rgb = (basic_out.rgb-0.5f)*max(contrast, 0.0)+0.5;"
 
          //shadow color
-        "   if(nl>0.01 && shadow<0.01) shadow_out = vec4(shadow_lut_color, 1.0); \n"
+        "   if(nl>0.01 && shadow<0.01) shadow_out = vec4(shadow_lut_color, s); \n"
 
          //toon shading
          "  if(nl<toon_threshold) toon_out = vec4(toon_lut_color, 1.0); \n"
          "  else toon_out = vec4(0.0, 0.0, 0.0, 0.0); \n"
-         "  toon_out = toon_out*toon_out.a+(1.0-toon_out.a)*shadow_out; \n"
+         "  toon_out = toon_out*(1.0-shadow_out.a)+shadow_out.a*shadow_out; \n"
 
         //detailing
         "   vec4 mat_id = texColor;"
@@ -174,10 +182,13 @@ SceneProgram::SceneProgram() {
     id = glGetUniformLocation(program, "id");
     toon_threshold = glGetUniformLocation(program, "toon_threshold");
     contrast = glGetUniformLocation(program, "contrast");
+    shadow_fade = glGetUniformLocation(program, "shadow_fade");
+    shadow_extent = glGetUniformLocation(program, "shadow_extent");
 
 	//set TEX to always refer to texture binding zero:
 	glUseProgram(program); //bind program -- glUniform* calls refer to this program now
 
+	glUniform1i(glGetUniformLocation(program, "shadow_depth_comp_tex"), 0);
 	glUniform1i(glGetUniformLocation(program, "shadow_depth_tex"), 0);
 	glUniform1i(glGetUniformLocation(program, "lut_tex"), 1);
 	glUniform1i(glGetUniformLocation(program, "toon_lut_tex"), 2);
