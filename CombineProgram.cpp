@@ -66,8 +66,8 @@ CombineProgram::CombineProgram() {
 
         //paper granulation
         "   vec4 surface = texelFetch(surface_tex, shifted_coord, 0); \n"
-        "   if(n<TEXTURE_LIMIT) surface = vec4(1.0, 1.0, 1.0, 1.0);"
-        "   float Piv = 0.5*(1.0-surface.r); \n"
+        "   if(ctrl.r>0) surface = vec4(1.0, 1.0, 1.0, 1.0);"
+        "   float Piv = 0.5*(0.8-surface.r); \n"
         "   float density_amt = 0.5; \n"
         "   vec4 powed = pow_col(shaded, 1.0+density_amt*Piv); \n"
         "   vec4 granulated = shaded.a*(shaded-density_amt*Piv)+(1.0-shaded.a)*powed; \n"
