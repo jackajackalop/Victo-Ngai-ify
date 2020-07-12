@@ -53,6 +53,8 @@ float line_depth_threshold = 0.005f;
 float line_normal_threshold = 0.3f;
 float tone_offset = 0.2f;
 float tone_strength = 0.0f;
+int frame_num = 0;
+GLuint screen_tex;
 
 //other globals
 int lut_size = 64;
@@ -279,6 +281,43 @@ PlantMode::PlantMode() {
 PlantMode::~PlantMode() {
 }
 
+void PlantMode::write_png(int frame){
+    int width = 1920;
+    int height = 1080;
+    const char *filename = ("renders/"+std::to_string(frame)+".png").c_str();
+    std::cout<<"writing to "<<filename<<std::endl;
+    FILE *output = fopen(filename, "wb");
+    if(!output) return;
+    png_structp png = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+    if (!png) return;
+    png_infop info = png_create_info_struct(png);
+    if(!info) return;
+    if(setjmp(png_jmpbuf(png))) return;
+    png_init_io(png, output);
+    png_set_IHDR(png, info, width, height, 8,
+            PNG_COLOR_TYPE_RGBA, PNG_INTERLACE_NONE,
+            PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+    png_write_info(png, info);
+
+    glBindTexture(GL_TEXTURE_2D, screen_tex);
+    std::vector<GLfloat> pixels(width*height*4, 0.0f);
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_FLOAT, pixels.data());
+    png_bytep row = (png_bytep)malloc(sizeof(png_byte)*width*4);
+    for(int y = height-1; y >= 0; y--) {
+        for(int x = 0; x<width; x++){
+            row[x*4] = glm::clamp(int32_t(pixels[(x+y*width)*4]*255), 0, 255);
+            row[x*4+1] = glm::clamp(int32_t(pixels[(x+y*width)*4+1]*255), 0, 255);
+            row[x*4+2] = glm::clamp(int32_t(pixels[(x+y*width)*4+2]*255), 0, 255);
+            row[x*4+3] = 255;//glm::clamp(int32_t(pixels[(x+y*width)*4+3]*255), 0, 255);
+        }
+        png_write_row(png, row);
+    }
+    png_write_end(png, NULL);
+
+    free(row);
+    fclose(output);
+    std::cout<<"done writing out to "<<frame_num<<std::endl;
+}
 bool PlantMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size) {
     //ignore any keys that are the result of automatic key repeat:
     if (evt.type == SDL_KEYDOWN && evt.key.repeat) {
@@ -331,9 +370,12 @@ bool PlantMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size
 }
 
 void PlantMode::update(float elapsed) {
+    camera_spin.x += 0.1*elapsed;
     camera_parent_transform->rotation = glm::angleAxis(camera_spin.x, glm::vec3(0.0f, 0.0f, 1.0f))
         *glm::angleAxis(camera_spin.y, glm::vec3(0.0, 1.0, 0.0));
     camera_parent_transform->position = camera_shift;
+    if(frame_num>0 && camera_spin.x<=6.28) write_png(frame_num);
+    frame_num++;
     TWEAK_SYNC();
 }
 
@@ -517,7 +559,10 @@ void PlantMode::draw_scene(GLuint shadow_depth_tex, GLuint *basic_tex_,
     glViewport(0, 0, textures.size.x, textures.size.y);
     camera->aspect = textures.size.x / float(textures.size.y);
 
-    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    float paperr = 0.85f;
+    float paperg = 0.85f;
+    float paperb = 0.82f;
+    glClearColor(paperr, paperg, paperb, 0.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     //set up basic OpenGL state:
@@ -590,7 +635,7 @@ void PlantMode::draw_scene(GLuint shadow_depth_tex, GLuint *basic_tex_,
     glViewport(0, 0, textures.size.x, textures.size.y);
     camera->aspect = textures.size.x / float(textures.size.y);
 
-    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+    glClearColor(paperr, paperg, paperb, 0.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
     //set up basic OpenGL state:
@@ -632,7 +677,7 @@ void PlantMode::draw_gradients_cpu(GLuint basic_tex, GLuint color_tex,
     glViewport(0, 0, textures.size.x, textures.size.y);
     camera-> aspect = textures.size.x/float(textures.size.y);
 
-    GLfloat black[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+    GLfloat black[4] = {1.0f, 1.0f, 1.0f, 0.0f};
     glClearBufferfv(GL_COLOR, 0, black);
 
     //set up basic OpenGL state:
@@ -800,7 +845,7 @@ void PlantMode::draw_simplify(GLuint basic_tex, GLuint color_tex,
     glViewport(0, 0, textures.size.x, textures.size.y);
     camera-> aspect = textures.size.x/float(textures.size.y);
 
-    GLfloat black[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+    GLfloat black[4] = {1.0f, 1.0f, 1.0f, 0.0f};
     glClearBufferfv(GL_COLOR, 0, black);
 
     //set up basic OpenGL state:
@@ -957,7 +1002,7 @@ void PlantMode::draw_combine(GLuint color_tex, GLuint transp_color_tex,
     glViewport(0, 0, textures.size.x, textures.size.y);
     camera->aspect = textures.size.x / float(textures.size.y);
 
-    GLfloat black[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+    GLfloat black[4] = {1.0f, 1.0f, 1.0f, 0.0f};
     glClearBufferfv(GL_COLOR, 0, black);
 
     //set up basic OpenGL state:
@@ -1016,7 +1061,7 @@ void PlantMode::draw_shadow_debug(GLuint shadow_depth_tex, GLuint *shadow_tex_)
     glViewport(0, 0, textures.size.x, textures.size.y);
     camera->aspect = textures.size.x / float(textures.size.y);
 
-    GLfloat black[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+    GLfloat black[4] = {1.0f, 1.0f, 1.0f, 0.0f};
     glClearBufferfv(GL_COLOR, 0, black);
 
     //set up basic OpenGL state:
@@ -1117,22 +1162,31 @@ void PlantMode::draw(glm::uvec2 const &drawable_size) {
 
     if(show == BASIC){
         glBindTexture(GL_TEXTURE_2D, textures.basic_tex);
+        screen_tex = textures.basic_tex;
     }else if(show == TRANSPARENT) {
         glBindTexture(GL_TEXTURE_2D, textures.transp_color_tex);
+        screen_tex = textures.transp_color_tex;
     }else if(show == MATERIALS){
         glBindTexture(GL_TEXTURE_2D, textures.tex_color_tex);
+        screen_tex = textures.tex_color_tex;
     }else if(show == FLATS){
         glBindTexture(GL_TEXTURE_2D, textures.color_tex);
+        screen_tex = textures.color_tex;
     }else if(show == SIMPLIFY){
         glBindTexture(GL_TEXTURE_2D, textures.gradient_tex);
+        screen_tex = textures.gradient_tex;
     }else if(show == SHADED){
         glBindTexture(GL_TEXTURE_2D, textures.shaded_tex);
+        screen_tex = textures.shaded_tex;
     }else if(show == SURFACE){
         glBindTexture(GL_TEXTURE_2D, textures.surface_tex);
+        screen_tex = textures.surface_tex;
     }else if(show == GRADIENT_TOON){
         glBindTexture(GL_TEXTURE_2D, textures.gradient_toon_tex);
+        screen_tex = textures.gradient_toon_tex;
     }else if(show == LINES){
         glBindTexture(GL_TEXTURE_2D, textures.line_color_tex);
+        screen_tex = textures.line_color_tex;
     }
 
     glDisable(GL_BLEND);
