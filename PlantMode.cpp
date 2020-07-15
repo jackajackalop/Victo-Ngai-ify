@@ -147,7 +147,7 @@ GLuint load_LUT(std::string const &filename) {
 }
 
 static Load< MeshBuffer > meshes(LoadTagDefault, []() -> MeshBuffer const * {
-        MeshBuffer *ret = new MeshBuffer(data_path("shower.pnct"));
+        MeshBuffer *ret = new MeshBuffer(data_path("brunch.pnct"));
         meshes_for_scene_program = ret->make_vao_for_program(scene_program->program);
         return ret;
         });
@@ -219,7 +219,7 @@ static Load< GLuint > tex4(LoadTagDefault, [](){
 
 static Load< Scene > scene(LoadTagLate, []() -> Scene const * {
         Scene *ret = new Scene();
-        ret->load(data_path("shower.scene"), [](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
+        ret->load(data_path("brunch.scene"), [](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
                 auto &mesh = meshes->lookup(mesh_name);
                 scene.drawables.emplace_back(transform);
                 Scene::Drawable::Pipeline &pipeline = scene.drawables.back().pipeline;
@@ -363,6 +363,8 @@ bool PlantMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size
             show = LINES;
         }else if(evt.key.keysym.scancode == SDL_SCANCODE_8){
             show = SHADED;
+        }else if(evt.key.keysym.scancode == SDL_SCANCODE_SPACE){
+            write_png(0);
         }
     }
 
@@ -370,11 +372,11 @@ bool PlantMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size
 }
 
 void PlantMode::update(float elapsed) {
-    camera_spin.x += 0.1*elapsed;
+//    camera_spin.x += 0.1*elapsed;
     camera_parent_transform->rotation = glm::angleAxis(camera_spin.x, glm::vec3(0.0f, 0.0f, 1.0f))
         *glm::angleAxis(camera_spin.y, glm::vec3(0.0, 1.0, 0.0));
     camera_parent_transform->position = camera_shift;
-    if(frame_num>0 && camera_spin.x<=6.28) write_png(frame_num);
+//    if(frame_num>0 && camera_spin.x<=6.28) write_png(frame_num);
     frame_num++;
     TWEAK_SYNC();
 }

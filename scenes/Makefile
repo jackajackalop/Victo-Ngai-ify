@@ -9,8 +9,8 @@ else
 endif
 
 all : \
-	../dist/vignette.pnct \
-	../dist/vignette.scene \
+	../dist/brunch.pnct \
+	../dist/brunch.scene \
 	../dist/plant.pnct \
 	../dist/plant.banims \
 	../dist/shower.pnct \
@@ -25,11 +25,11 @@ all : \
 ../dist/plant.banims : plant.blend export-bone-animations.py
 	$(BLENDER) --background --python export-bone-animations.py -- '$<' 'Plant' '[0,30]Wind;[100,140]Walk' '$@'
 
-../dist/vignette.scene : vignette.blend export-scene.py
-	$(BLENDER) --background --python export-scene.py -- 'vignette.blend' '$@'
+../dist/brunch.scene : brunch.blend export-scene.py
+	$(BLENDER) --background --python export-scene.py -- 'brunch.blend' '$@'
 
-../dist/vignette.pnct : vignette.blend export-meshes.py
-	$(BLENDER) --background --python export-meshes.py -- 'vignette.blend' '$@'
+../dist/brunch.pnct : brunch.blend export-meshes.py
+	$(BLENDER) --background --python export-meshes.py -- 'brunch.blend' '$@'
 
 ../dist/shower.scene : shower.blend export-scene.py
 	$(BLENDER) --background --python export-scene.py -- 'shower.blend' '$@'
