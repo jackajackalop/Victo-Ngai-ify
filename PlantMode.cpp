@@ -42,13 +42,13 @@ enum Stages {
 
 //art directable globals
 int show = 8;
-float toon_threshold = 0.01f;
-float contrast = 1.3f;
+float toon_threshold = 0.2f;
+float contrast = 1.1f;
 float depth_gradient_extent = 0.0f;
 float depth_gradient_brightness = 1.0f;
 int line_weight = 0;
-float shadow_fade = 5.0f;
-float shadow_extent = 0.015f;
+float shadow_fade = 2.0f;
+float shadow_extent = 0.02f;
 float line_depth_threshold = 0.005f;
 float line_normal_threshold = 0.3f;
 float tone_offset = 0.2f;
@@ -154,7 +154,7 @@ static Load< MeshBuffer > meshes(LoadTagDefault, []() -> MeshBuffer const * {
 
 GLuint load_LUT(std::string const &filename);
 static Load< GLuint > lut_tex(LoadTagDefault, []() -> GLuint const *{
-        return new GLuint(load_LUT(data_path("shower_lut.cube")));
+        return new GLuint(load_LUT(data_path("brunch_lut.cube")));
         });
 
 static Load< GLuint > toon_lut_tex(LoadTagDefault, []() -> GLuint const *{
@@ -404,7 +404,7 @@ struct Textures {
 
     GLuint depth_tex = 0;
     GLuint shadow_depth_tex = 0;
-    glm::uvec2 shadow_size = glm::uvec2(1024, 1024);
+    glm::uvec2 shadow_size = glm::uvec2(2048, 2048);
     glm::mat4 shadow_world_to_clip = glm::mat4(1.0);
 
     GLuint final_tex = 0;
@@ -1158,6 +1158,7 @@ void PlantMode::draw(glm::uvec2 const &drawable_size) {
                 textures.surface_tex, &textures.shaded_tex);
     }
 
+    draw_shadow_debug(textures.shadow_depth_tex, &textures.shadow_tex);
     //Copy scene from color buffer to screen, performing post-processing effects:
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glActiveTexture(GL_TEXTURE0);
@@ -1182,6 +1183,7 @@ void PlantMode::draw(glm::uvec2 const &drawable_size) {
         screen_tex = textures.shaded_tex;
     }else if(show == SURFACE){
         glBindTexture(GL_TEXTURE_2D, textures.surface_tex);
+        glBindTexture(GL_TEXTURE_2D, textures.shadow_tex);
         screen_tex = textures.surface_tex;
     }else if(show == GRADIENT_TOON){
         glBindTexture(GL_TEXTURE_2D, textures.gradient_toon_tex);

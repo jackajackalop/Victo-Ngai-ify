@@ -24,7 +24,7 @@ ShadowDebugProgram::ShadowDebugProgram() {
 		"void main() {\n"
         //used this http://glampert.com/2014/01-26/visualizing-the-depth-buffer/
         "   float s = texelFetch(shadow_depth_tex, ivec2(gl_FragCoord.xy), 0).r;"
-        "   s = (2.0*0.1)/(600.0+0.1-s*(600.0-0.1));"
+        "   s = (2.0*0.1)/(20.0+0.1-s*(20.0-0.1));"
         "   shadow_debug_out = vec4(s, s, s, 1.0);"
 		"}\n"
 	);
